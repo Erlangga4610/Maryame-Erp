@@ -45,6 +45,9 @@ class Content extends Model
         'pic_video_id',
         'revision_note',
         'version',
+        'copy_brief',
+        'visual_brief',
+        'video_brief',
     ];
 
     protected $casts = [
@@ -89,6 +92,16 @@ class Content extends Model
     public function picVideo()
     {
         return $this->belongsTo(User::class, 'pic_video_id');
+    }
+
+    public function approvals()
+    {
+        return $this->hasMany(Approval::class);
+    }
+
+    public function tiktokQc()
+    {
+        return $this->hasOne(TiktokQc::class, 'content_id');
     }
 
     public function getFullPublishDateAttribute(): ?string

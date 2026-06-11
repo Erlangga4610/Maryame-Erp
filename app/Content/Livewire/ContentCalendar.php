@@ -4,7 +4,10 @@ namespace App\Content\Livewire;
 
 use App\Content\Enums\ContentStatus;
 use App\Content\Enums\ContentType;
+use App\Content\Models\Approval;
 use App\Content\Models\Content;
+use App\Content\Models\TiktokQc;
+use App\Enums\ApprovalStatus;
 use App\Models\Platform;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
@@ -51,6 +54,31 @@ class ContentCalendar extends Component
 
     public $showUnscheduledFilters = false;
 
+    public $showApproveModal = false;
+
+    public $approveContentId = null;
+
+    public $approveStage = null;
+
+    public $approveNotes = '';
+
+    public $showQcModal = false;
+
+    public $qcContentId = null;
+
+    public $qc = [
+        'hook_strong' => false,
+        'cta_clear' => false,
+        'audio_clear' => false,
+        'visual_quality' => false,
+        'caption_complete' => false,
+        'product_visible' => false,
+        'duration_appropriate' => false,
+        'branding_included' => false,
+        'no_sensitive_content' => false,
+        'notes' => '',
+    ];
+
     public $form = [
         'platform_id' => '',
         'product_id' => '',
@@ -64,6 +92,9 @@ class ContentCalendar extends Component
         'pic_copy_id' => '',
         'pic_visual_id' => '',
         'pic_video_id' => '',
+        'copy_brief' => '',
+        'visual_brief' => '',
+        'video_brief' => '',
     ];
 
     protected $rules = [
@@ -74,6 +105,22 @@ class ContentCalendar extends Component
         'form.deadline_produksi' => 'nullable|date',
     ];
 
+    protected $validationAttributes = [
+        'form.platform_id' => 'Platform',
+        'form.theme' => 'Tema',
+        'form.priority' => 'Priority',
+        'form.publish_date' => 'Tanggal Publish',
+        'form.deadline_produksi' => 'Deadline Produksi',
+    ];
+
+    public function updatedShowModal($value)
+    {
+        if (! $value) {
+            $this->reset('form');
+            $this->resetValidation();
+        }
+    }
+
     public function mount()
     {
         $this->currentMonth = now()->month;
@@ -82,7 +129,7 @@ class ContentCalendar extends Component
 
     public function render()
     {
-        $query = Content::with(['platform', 'product', 'campaign', 'picCopy', 'picVisual', 'picVideo']);
+        $query = Content::with(['platform', 'product', 'campaign', 'picCopy', 'picVisual', 'picVideo', 'approvals', 'tiktokQc']);
 
         if ($this->selectedPlatform) {
             $query->where('platform_id', $this->selectedPlatform);
@@ -130,6 +177,8 @@ class ContentCalendar extends Component
             ? $query->paginate(15)
             : $query->paginate(999);
 
+        $userRole = Auth::user()?->roles->first()?->name;
+
         $unscheduledQuery = Content::with(['platform', 'picCopy'])
             ->whereNull('publish_date');
 
@@ -172,6 +221,7 @@ class ContentCalendar extends Component
             'unscheduledItems' => $unscheduledItems,
             'assignees' => $assignees,
             'contentTypes' => $contentTypes,
+            'userRole' => $userRole,
         ])->layout('layouts.admin', ['title' => 'Content Calendar']);
     }
 
@@ -196,6 +246,7 @@ class ContentCalendar extends Component
     public function openCreateModal()
     {
         $this->reset('form');
+        $this->resetValidation();
         $this->modalMode = 'create';
         $this->showModal = true;
     }
@@ -209,11 +260,13 @@ class ContentCalendar extends Component
         $raw = $content->only([
             'platform_id', 'product_id', 'campaign_id', 'theme', 'caption',
             'description', 'pic_copy_id', 'pic_visual_id', 'pic_video_id',
+            'copy_brief', 'visual_brief', 'video_brief',
         ]);
         $raw['priority'] = $content->priority?->value ?? 'medium';
         $raw['publish_date'] = $content->publish_date?->format('Y-m-d') ?? '';
         $raw['deadline_produksi'] = $content->deadline_produksi?->format('Y-m-d') ?? '';
         $this->form = $raw;
+        $this->resetValidation();
 
         $this->showModal = true;
     }
@@ -235,6 +288,14 @@ class ContentCalendar extends Component
 
         $this->showModal = false;
         $this->reset('form');
+        $this->resetValidation();
+    }
+
+    public function closeModal()
+    {
+        $this->showModal = false;
+        $this->reset('form');
+        $this->resetValidation();
     }
 
     public function confirmDelete($id)
@@ -300,6 +361,150 @@ class ContentCalendar extends Component
         } else {
             $this->currentMonth++;
         }
+    }
+
+    public function openQcModal($id)
+    {
+        $this->qcContentId = $id;
+        $this->resetQcForm();
+
+        $existing = TiktokQc::where('content_id', $id)->first();
+        if ($existing) {
+            $this->qc = $existing->only([
+                'hook_strong', 'cta_clear', 'audio_clear', 'visual_quality',
+                'caption_complete', 'product_visible', 'duration_appropriate',
+                'branding_included', 'no_sensitive_content', 'notes',
+            ]);
+        }
+
+        $this->showQcModal = true;
+    }
+
+    public function closeQcModal()
+    {
+        $this->showQcModal = false;
+        $this->qcContentId = null;
+        $this->resetQcForm();
+    }
+
+    public function resetQcForm()
+    {
+        $this->qc = [
+            'hook_strong' => false,
+            'cta_clear' => false,
+            'audio_clear' => false,
+            'visual_quality' => false,
+            'caption_complete' => false,
+            'product_visible' => false,
+            'duration_appropriate' => false,
+            'branding_included' => false,
+            'no_sensitive_content' => false,
+            'notes' => '',
+        ];
+    }
+
+    public function saveQc()
+    {
+        $this->validate([
+            'qc.notes' => 'nullable|string|max:1000',
+        ]);
+
+        $data = collect($this->qc)->map(fn ($v) => $v === '' ? null : $v)->all();
+        $data['checked_by'] = Auth::id();
+        $data['checked_at'] = now();
+        $data['status'] = collect($this->qc)->except('notes')->every(fn ($v) => $v === true) ? 'passed' : 'need_revision';
+
+        TiktokQc::updateOrCreate(
+            ['content_id' => $this->qcContentId],
+            $data,
+        );
+
+        $allPassed = collect($this->qc)->except('notes')->every(fn ($v) => $v === true);
+
+        if ($allPassed) {
+            flash()->success('QC TikTok selesai — semua checklist terpenuhi!');
+        } else {
+            flash()->warning('QC TikTok perlu perbaikan — ada item yang belum terpenuhi.');
+        }
+
+        $this->closeQcModal();
+    }
+
+    public function submitForApproval($id)
+    {
+        $content = Content::findOrFail($id);
+
+        $content->status = ContentStatus::READY_REVIEW;
+        $content->save();
+
+        foreach (['mc_bm', 'legal'] as $stage) {
+            Approval::updateOrCreate(
+                ['content_id' => $content->id, 'stage' => $stage],
+                ['status' => ApprovalStatus::PENDING->value, 'approver_id' => null, 'notes' => null],
+            );
+        }
+
+        flash()->success('Konten dikirim untuk approval!');
+    }
+
+    public function confirmApprove($id, $stage)
+    {
+        $this->approveContentId = $id;
+        $this->approveStage = $stage;
+        $this->approveNotes = '';
+        $this->showApproveModal = true;
+    }
+
+    public function cancelApprove()
+    {
+        $this->showApproveModal = false;
+        $this->approveContentId = null;
+        $this->approveStage = null;
+        $this->approveNotes = '';
+    }
+
+    public function approveContent()
+    {
+        $approval = Approval::where('content_id', $this->approveContentId)
+            ->where('stage', $this->approveStage)
+            ->firstOrFail();
+
+        $approval->status = ApprovalStatus::APPROVED->value;
+        $approval->approver_id = Auth::id();
+        $approval->notes = $this->approveNotes;
+        $approval->save();
+
+        $allApproved = Approval::where('content_id', $this->approveContentId)
+            ->where('status', '!=', ApprovalStatus::APPROVED->value)
+            ->doesntExist();
+
+        if ($allApproved) {
+            $content = Content::findOrFail($this->approveContentId);
+            $content->status = ContentStatus::APPROVED;
+            $content->save();
+        }
+
+        flash()->success('Konten berhasil di-approve!');
+        $this->cancelApprove();
+    }
+
+    public function reviseContent()
+    {
+        $approval = Approval::where('content_id', $this->approveContentId)
+            ->where('stage', $this->approveStage)
+            ->firstOrFail();
+
+        $approval->status = ApprovalStatus::REVISION->value;
+        $approval->approver_id = Auth::id();
+        $approval->notes = $this->approveNotes;
+        $approval->save();
+
+        $content = Content::findOrFail($this->approveContentId);
+        $content->status = ContentStatus::IN_PRODUCTION;
+        $content->save();
+
+        flash()->success('Revisi diminta. Konten dikembalikan ke In Production.');
+        $this->cancelApprove();
     }
 
     public function resetFilters()

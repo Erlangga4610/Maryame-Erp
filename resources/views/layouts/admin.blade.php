@@ -28,9 +28,9 @@
         </flux:brand>
 
         <flux:navbar class="-mb-px max-lg:hidden">
-            <flux:navbar.item icon="home" href="dashboard" current>Dashboard</flux:navbar.item>
-            <flux:navbar.item icon="calendar" href="contents">Content Calendar</flux:navbar.item>
-            <flux:navbar.item icon="inbox" badge="3" href="#">Approval Inbox</flux:navbar.item>
+            <flux:navbar.item icon="home" href="/dashboard" :current="request()->routeIs('dashboard')">Dashboard</flux:navbar.item>
+            <flux:navbar.item icon="calendar" href="/contents" :current="request()->routeIs('contents.*')">Content Calendar</flux:navbar.item>
+            <flux:navbar.item icon="inbox" href="/approval-inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:navbar.item>
 
             <flux:separator vertical variant="subtle" class="my-2" />
 
@@ -38,10 +38,10 @@
                 <flux:navbar.item icon:trailing="chevron-down">Master Data</flux:navbar.item>
 
                 <flux:navmenu>
-                    <flux:navmenu.item href="#">Platforms</flux:navmenu.item>
-                    <flux:navmenu.item href="#">Products</flux:navmenu.item>
-                    <flux:navmenu.item href="#">Campaigns</flux:navmenu.item>
-                    <flux:navmenu.item href="#">Users</flux:navmenu.item>
+                    <flux:navmenu.item href="/master-data/platforms">Platforms</flux:navmenu.item>
+                    <flux:navmenu.item href="/master-data/products">Products</flux:navmenu.item>
+                    <flux:navmenu.item href="/master-data/campaigns">Campaigns</flux:navmenu.item>
+                    <flux:navmenu.item href="/master-data/users">Users</flux:navmenu.item>
                 </flux:navmenu>
             </flux:dropdown>
         </flux:navbar>
@@ -86,23 +86,23 @@
         </flux:sidebar.header>
 
         <flux:sidebar.nav>
-            <flux:sidebar.item icon="home" href="dashboard" current>Dashboard</flux:sidebar.item>
-            <flux:sidebar.item icon="calendar" href="contents">Content Calendar</flux:sidebar.item>
-            <flux:sidebar.item icon="inbox" badge="3" href="approval-inbox">Approval Inbox</flux:sidebar.item>
+            <flux:sidebar.item icon="home" href="/dashboard" :current="request()->routeIs('dashboard')">Dashboard</flux:sidebar.item>
+            <flux:sidebar.item icon="calendar" href="/contents" :current="request()->routeIs('contents.*')">Content Calendar</flux:sidebar.item>
+            <flux:sidebar.item icon="inbox" href="/approval-inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:sidebar.item>
 
             <flux:sidebar.group expandable heading="Master Data">
-                <flux:sidebar.item href="platforms">Platforms</flux:sidebar.item>
-                <flux:sidebar.item href="products">Products</flux:sidebar.item>
-                <flux:sidebar.item href="campaigns">Campaigns</flux:sidebar.item>
-                <flux:sidebar.item href="users">Users</flux:sidebar.item>
+                <flux:sidebar.item href="/master-data/platforms">Platforms</flux:sidebar.item>
+                <flux:sidebar.item href="/master-data/products">Products</flux:sidebar.item>
+                <flux:sidebar.item href="/master-data/campaigns">Campaigns</flux:sidebar.item>
+                <flux:sidebar.item href="/master-data/users">Users</flux:sidebar.item>
             </flux:sidebar.group>
         </flux:sidebar.nav>
 
         <flux:sidebar.spacer />
 
         <flux:sidebar.nav>
-            <flux:sidebar.item icon="cog-6-tooth" href="settings">Settings</flux:sidebar.item>
-            <flux:sidebar.item icon="information-circle" href="help">Help</flux:sidebar.item>
+            <flux:sidebar.item icon="cog-6-tooth" href="#">Settings</flux:sidebar.item>
+            <flux:sidebar.item icon="information-circle" href="#">Help</flux:sidebar.item>
         </flux:sidebar.nav>
     </flux:sidebar>
 
@@ -112,18 +112,18 @@
                 <flux:heading size="lg" level="2" class="mb-4">{{ $title }}</flux:heading>
 
                 <flux:navlist>
-                    <flux:navlist.item href="dashboard" icon="home" current>Dashboard</flux:navlist.item>
-                    <flux:navlist.item href="contents" icon="calendar">Content Calendar</flux:navlist.item>
-                    <flux:navlist.item href="approval-inbox" icon="inbox" badge="3">Approval Inbox</flux:navlist.item>
+                    <flux:navlist.item href="/dashboard" icon="home" :current="request()->routeIs('dashboard')">Dashboard</flux:navlist.item>
+                    <flux:navlist.item href="/contents" icon="calendar" :current="request()->routeIs('contents.*')">Content Calendar</flux:navlist.item>
+                    <flux:navlist.item href="/approval-inbox" icon="inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:navlist.item>
 
                     <flux:separator />
 
                     <flux:navlist.item icon="circle-stack">Master Data</flux:navlist.item>
                     <div class="pl-10 space-y-1">
-                        <flux:navlist.item href="#">Platforms</flux:navlist.item>
-                        <flux:navlist.item href="#">Products</flux:navlist.item>
-                        <flux:navlist.item href="#">Campaigns</flux:navlist.item>
-                        <flux:navlist.item href="#">Users</flux:navlist.item>
+                        <flux:navlist.item href="/master-data/platforms">Platforms</flux:navlist.item>
+                        <flux:navlist.item href="/master-data/products">Products</flux:navlist.item>
+                        <flux:navlist.item href="/master-data/campaigns">Campaigns</flux:navlist.item>
+                        <flux:navlist.item href="/master-data/users">Users</flux:navlist.item>
                     </div>
                 </flux:navlist>
 
