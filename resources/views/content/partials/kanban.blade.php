@@ -35,11 +35,31 @@
                                 <span class="truncate">{{ $content->picCopy?->name ?? '-' }}</span>
                             </div>
 
+                            @php $hasBrief = $content->copy_brief || $content->visual_brief || $content->video_brief; @endphp
+                            @if($hasBrief)
+                                <div class="flex items-center gap-1 mt-1">
+                                    <button type="button" wire:click="openBriefModal({{ $content->id }})" class="text-[10px] text-pink-600 dark:text-pink-400 hover:underline">
+                                        @if($content->copy_brief)<span class="bg-pink-100 dark:bg-pink-900/30 px-1.5 py-0.5 rounded">Copy</span>@endif
+                                        @if($content->visual_brief)<span class="bg-pink-100 dark:bg-pink-900/30 px-1.5 py-0.5 rounded">Visual</span>@endif
+                                        @if($content->video_brief)<span class="bg-pink-100 dark:bg-pink-900/30 px-1.5 py-0.5 rounded">Video</span>@endif
+                                        <span class="ml-0.5 hover:underline">Lihat</span>
+                                    </button>
+                                </div>
+                            @endif
+
                             @if($content->publish_date)
                                 <div class="mt-1.5 text-zinc-500 dark:text-zinc-400">
                                     {{ $content->publish_date->format('d M') }}
                                 </div>
                             @endif
+
+                            <div class="mt-1.5 flex items-center gap-2 text-[10px] text-zinc-400">
+                                @if($content->thumbnail_link)
+                                    <span class="truncate max-w-[80px]">{{ \Illuminate\Support\Str::after($content->thumbnail_link, '/') }}</span>
+                                @endif
+                                <button type="button" wire:click="openVersionModal({{ $content->id }})" class="hover:text-pink-600 dark:hover:text-pink-400 hover:underline">v{{ $content->version }}</button>
+                                <button type="button" wire:click="openAdjustmentModal({{ $content->id }})" class="hover:text-pink-600 dark:hover:text-pink-400 hover:underline">Log</button>
+                            </div>
 
                             @php
                                 $mcApproval = $content->approvals->where('stage', 'mc_bm')->first();

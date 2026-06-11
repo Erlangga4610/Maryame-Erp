@@ -4,7 +4,10 @@
     @include('content.partials.table')
     @include('content.partials.calendar')
     @include('content.partials.modals.create-edit')
+    @include('content.partials.modals.brief')
     @include('content.partials.modals.approve')
     @include('content.partials.modals.tiktok-qc')
     @include('content.partials.modals.delete')
+    @include('content.partials.modals.version-history')
+    @include('content.partials.modals.adjustment-log')
 </div>

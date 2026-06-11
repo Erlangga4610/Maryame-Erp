@@ -16,6 +16,12 @@ class Platforms extends Component
 
     public $editId = null;
 
+    public $showDeleteModal = false;
+
+    public $deleteId = null;
+
+    public $deleteName = '';
+
     public $name = '';
 
     public $code = '';
@@ -101,7 +107,22 @@ class Platforms extends Component
         $this->closeModal();
     }
 
-    public function delete($id)
+    public function confirmDelete($id)
+    {
+        $platform = Platform::findOrFail($id);
+        $this->deleteId = $platform->id;
+        $this->deleteName = $platform->name;
+        $this->showDeleteModal = true;
+    }
+
+    public function cancelDelete()
+    {
+        $this->showDeleteModal = false;
+        $this->deleteId = null;
+        $this->deleteName = '';
+    }
+
+    public function executeDelete()
     {
         if (! $this->canEdit()) {
             flash()->error('Anda tidak memiliki izin untuk menghapus data.');
@@ -109,8 +130,9 @@ class Platforms extends Component
             return;
         }
 
-        Platform::findOrFail($id)->delete();
+        Platform::findOrFail($this->deleteId)->delete();
         flash()->success('Platform berhasil dihapus!');
+        $this->cancelDelete();
     }
 
     public function closeModal()

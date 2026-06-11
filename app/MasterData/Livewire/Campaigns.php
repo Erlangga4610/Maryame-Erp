@@ -16,6 +16,12 @@ class Campaigns extends Component
 
     public $editId = null;
 
+    public $showDeleteModal = false;
+
+    public $deleteId = null;
+
+    public $deleteName = '';
+
     public $name = '';
 
     public $type = 'seasonal';
@@ -111,7 +117,22 @@ class Campaigns extends Component
         $this->closeModal();
     }
 
-    public function delete($id)
+    public function confirmDelete($id)
+    {
+        $campaign = Campaign::findOrFail($id);
+        $this->deleteId = $campaign->id;
+        $this->deleteName = $campaign->name;
+        $this->showDeleteModal = true;
+    }
+
+    public function cancelDelete()
+    {
+        $this->showDeleteModal = false;
+        $this->deleteId = null;
+        $this->deleteName = '';
+    }
+
+    public function executeDelete()
     {
         if (! $this->canEdit()) {
             flash()->error('Anda tidak memiliki izin untuk menghapus data.');
@@ -119,8 +140,9 @@ class Campaigns extends Component
             return;
         }
 
-        Campaign::findOrFail($id)->delete();
+        Campaign::findOrFail($this->deleteId)->delete();
         flash()->success('Campaign berhasil dihapus!');
+        $this->cancelDelete();
     }
 
     public function closeModal()

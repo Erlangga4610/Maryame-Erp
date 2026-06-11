@@ -54,9 +54,11 @@ resources/views/content/
     ├── table.blade.php                 # table view + pagination
     ├── calendar.blade.php              # unscheduled panel + calendar grid
     └── modals/
-        ├── create-edit.blade.php       # form modal (4 tabs: Detail/Copy/Visual/Video)
+        ├── create-edit.blade.php       # form modal (5 tabs: Detail/Copy/Visual/Video/Asset)
         ├── approve.blade.php           # approval modal
         ├── tiktok-qc.blade.php         # QC TikTok checklist
+        ├── version-history.blade.php   # version history (riwayat versi)
+        ├── adjustment-log.blade.php    # per-field change log
         └── delete.blade.php            # delete confirmation
 ```
 
@@ -113,6 +115,25 @@ CSP (create) → submit → ready_review → MC/BM approve → Legal approve →
 - Stored in `tiktok_qc` table, one-per-content (updateOrCreate)
 - Accessible via button on kanban card or table row
 
+## Asset + Version (Riwayat Versi)
+
+- **Asset tab** in create-edit modal: upload final asset (image/video) and thumbnail via `Livewire\WithFileUploads`
+- Files stored in `storage/app/public/assets/` and `storage/app/public/thumbnails/`
+- `final_asset_link` and `thumbnail_link` columns already existed in `contents` table but were unused
+- On content edit, if tracked fields changed, version is incremented and a `ContentVersion` snapshot is created in `content_versions` table (JSON snapshot of all content fields)
+- Version number shown on kanban card (`v{N}`) and table row — clickable to open Riwayat Versi modal
+- `ContentVersion` model in `App\Content\Models\`
+- Relation: `Content::versions()` hasMany
+
+## Adjustment Log
+
+- Per-field change tracking recorded in `adjustment_logs` table
+- Created automatically when ContentCalendar `save()` detects field changes (compares old vs new values)
+- Tracks all brief fields, priority, dates, PIC assignments, asset links
+- Displayed in modal with before/after diff (red/green cards)
+- `AdjustmentLog` model in `App\Content\Models\`
+- Relation: `Content::adjustmentLogs()` hasMany
+
 ## Master Data CRUD + RBAC
 
 - `HasMasterDataPermissions` trait: `canEdit()` = `rbac_tier === 1` (CSP, SMS)
@@ -152,7 +173,7 @@ Status flow: `draft → in_production → ready_review → approved → schedule
 
 - `phpunit.xml` targets SQLite `:memory:` — no PostgreSQL needed
 - Always run `config:clear` first (handled by `composer test`)
-- Current test count: 3 (ExampleTest — route redirects, login page, content factory)
+- Current test count: 5 (ExampleTest — 2 route tests; ContentVersionTest — model existence, relations)
 - `TestCase.php` is empty (extends base Laravel)
 
 ## Login credentials (dev)

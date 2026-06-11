@@ -50,8 +50,22 @@
 
                     <flux:table.cell>
                         <div class="flex gap-2 flex-wrap">
+                            @if($content->copy_brief || $content->visual_brief || $content->video_brief)
+                                <flux:button size="sm" variant="outline" wire:click="openBriefModal({{ $content->id }})">
+                                    Brief
+                                </flux:button>
+                            @endif
+
                             <flux:button size="sm" variant="outline" wire:click="openEditModal({{ $content->id }})">
                                 Edit
+                            </flux:button>
+
+                            <flux:button size="sm" variant="outline" wire:click="openVersionModal({{ $content->id }})">
+                                v{{ $content->version }}
+                            </flux:button>
+
+                            <flux:button size="sm" variant="outline" wire:click="openAdjustmentModal({{ $content->id }})">
+                                Log
                             </flux:button>
 
                             @if($content->status->value === 'draft')

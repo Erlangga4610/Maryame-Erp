@@ -19,6 +19,12 @@ class Users extends Component
 
     public $editId = null;
 
+    public $showDeleteModal = false;
+
+    public $deleteId = null;
+
+    public $deleteName = '';
+
     public $name = '';
 
     public $email = '';
@@ -36,6 +42,18 @@ class Users extends Component
     public $is_active = true;
 
     public $role = '';
+
+    protected $validationAttributes = [
+        'name' => 'Nama',
+        'email' => 'Email',
+        'employee_id' => 'Employee ID',
+        'position' => 'Posisi',
+        'department' => 'Departemen',
+        'is_active' => 'Status Aktif',
+        'role' => 'Role',
+        'password' => 'Password',
+        'password_confirmation' => 'Konfirmasi Password',
+    ];
 
     public function render()
     {
@@ -122,7 +140,28 @@ class Users extends Component
         $this->closeModal();
     }
 
-    public function delete($id)
+    public function confirmDelete($id)
+    {
+        if ((int) $id === (int) Auth::id()) {
+            flash()->error('Tidak bisa menghapus akun sendiri!');
+
+            return;
+        }
+
+        $user = User::findOrFail($id);
+        $this->deleteId = $user->id;
+        $this->deleteName = $user->name;
+        $this->showDeleteModal = true;
+    }
+
+    public function cancelDelete()
+    {
+        $this->showDeleteModal = false;
+        $this->deleteId = null;
+        $this->deleteName = '';
+    }
+
+    public function executeDelete()
     {
         if (! $this->canEdit()) {
             flash()->error('Anda tidak memiliki izin untuk menghapus data.');
@@ -130,14 +169,9 @@ class Users extends Component
             return;
         }
 
-        if ((int) $id === (int) Auth::id()) {
-            flash()->error('Tidak bisa menghapus akun sendiri!');
-
-            return;
-        }
-
-        User::findOrFail($id)->delete();
+        User::findOrFail($this->deleteId)->delete();
         flash()->success('User berhasil dihapus!');
+        $this->cancelDelete();
     }
 
     public function closeModal()

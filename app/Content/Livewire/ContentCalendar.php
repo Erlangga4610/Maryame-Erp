@@ -4,19 +4,23 @@ namespace App\Content\Livewire;
 
 use App\Content\Enums\ContentStatus;
 use App\Content\Enums\ContentType;
+use App\Content\Models\AdjustmentLog;
 use App\Content\Models\Approval;
 use App\Content\Models\Content;
+use App\Content\Models\ContentVersion;
 use App\Content\Models\TiktokQc;
 use App\Enums\ApprovalStatus;
 use App\Models\Platform;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Component;
+use Livewire\WithFileUploads;
 use Livewire\WithPagination;
 
 class ContentCalendar extends Component
 {
-    use WithPagination;
+    use WithFileUploads, WithPagination;
 
     public $selectedPlatform = '';
 
@@ -78,6 +82,26 @@ class ContentCalendar extends Component
         'no_sensitive_content' => false,
         'notes' => '',
     ];
+
+    public $showBriefModal = false;
+
+    public $briefContent = null;
+
+    public $showVersionModal = false;
+
+    public $versionContentId = null;
+
+    public $showAdjustmentModal = false;
+
+    public $adjustmentContentId = null;
+
+    public $finalAsset;
+
+    public $thumbnail;
+
+    public $existingFinalAsset = null;
+
+    public $existingThumbnail = null;
 
     public $form = [
         'platform_id' => '',
@@ -266,6 +290,8 @@ class ContentCalendar extends Component
         $raw['publish_date'] = $content->publish_date?->format('Y-m-d') ?? '';
         $raw['deadline_produksi'] = $content->deadline_produksi?->format('Y-m-d') ?? '';
         $this->form = $raw;
+        $this->existingFinalAsset = $content->final_asset_link;
+        $this->existingThumbnail = $content->thumbnail_link;
         $this->resetValidation();
 
         $this->showModal = true;
@@ -277,17 +303,76 @@ class ContentCalendar extends Component
 
         $data = collect($this->form)->map(fn ($v) => $v === '' ? null : $v)->all();
 
+        if ($this->finalAsset) {
+            $data['final_asset_link'] = $this->finalAsset->store('assets', 'public');
+        }
+
+        if ($this->thumbnail) {
+            $data['thumbnail_link'] = $this->thumbnail->store('thumbnails', 'public');
+        }
+
         if ($this->modalMode === 'create') {
-            Content::create($data);
+            $content = Content::create($data);
+
+            $content->version = 1;
+            $content->save();
+
+            ContentVersion::create([
+                'content_id' => $content->id,
+                'version' => 1,
+                'data' => $content->fresh()->toArray(),
+                'created_by' => Auth::id(),
+            ]);
+
             flash()->success('Konten berhasil dibuat!');
         } else {
             $content = Content::findOrFail($this->contentId);
+            $original = $content->fresh()->toArray();
             $content->update($data);
+
+            if ($this->finalAsset || $this->thumbnail) {
+                $content->version = $content->version + 1;
+                $content->save();
+            }
+
+            $versionIncreased = false;
+            $trackedFields = ['theme', 'caption', 'description', 'content_type', 'priority',
+                'publish_date', 'deadline_produksi', 'pic_copy_id', 'pic_visual_id', 'pic_video_id',
+                'copy_brief', 'visual_brief', 'video_brief', 'final_asset_link', 'thumbnail_link'];
+
+            foreach ($trackedFields as $field) {
+                $old = $original[$field] ?? null;
+                $new = $data[$field] ?? $content->$field ?? null;
+
+                if ($old !== $new) {
+                    AdjustmentLog::create([
+                        'content_id' => $content->id,
+                        'user_id' => Auth::id(),
+                        'field' => $field,
+                        'old_value' => is_bool($old) ? ($old ? '1' : '0') : $old,
+                        'new_value' => is_bool($new) ? ($new ? '1' : '0') : $new,
+                    ]);
+                    $versionIncreased = true;
+                }
+            }
+
+            if ($versionIncreased) {
+                $content->version = $content->version + 1;
+                $content->save();
+
+                ContentVersion::create([
+                    'content_id' => $content->id,
+                    'version' => $content->version,
+                    'data' => $content->fresh()->toArray(),
+                    'created_by' => Auth::id(),
+                ]);
+            }
+
             flash()->success('Konten berhasil diupdate!');
         }
 
         $this->showModal = false;
-        $this->reset('form');
+        $this->reset('form', 'finalAsset', 'thumbnail', 'existingFinalAsset', 'existingThumbnail');
         $this->resetValidation();
     }
 
@@ -361,6 +446,18 @@ class ContentCalendar extends Component
         } else {
             $this->currentMonth++;
         }
+    }
+
+    public function openBriefModal($id)
+    {
+        $this->briefContent = Content::with(['platform', 'product', 'campaign'])->findOrFail($id);
+        $this->showBriefModal = true;
+    }
+
+    public function closeBriefModal()
+    {
+        $this->showBriefModal = false;
+        $this->briefContent = null;
     }
 
     public function openQcModal($id)
@@ -510,5 +607,53 @@ class ContentCalendar extends Component
     public function resetFilters()
     {
         $this->reset(['selectedPlatform', 'selectedStatus', 'selectedPriority', 'search']);
+    }
+
+    public function openVersionModal($id)
+    {
+        $this->versionContentId = $id;
+        $this->showVersionModal = true;
+    }
+
+    public function closeVersionModal()
+    {
+        $this->showVersionModal = false;
+        $this->versionContentId = null;
+    }
+
+    public function openAdjustmentModal($id)
+    {
+        $this->adjustmentContentId = $id;
+        $this->showAdjustmentModal = true;
+    }
+
+    public function closeAdjustmentModal()
+    {
+        $this->showAdjustmentModal = false;
+        $this->adjustmentContentId = null;
+    }
+
+    public function getVersionHistoryProperty()
+    {
+        if (! $this->versionContentId) {
+            return collect();
+        }
+
+        return ContentVersion::with('creator')
+            ->where('content_id', $this->versionContentId)
+            ->orderBy('version', 'desc')
+            ->get();
+    }
+
+    public function getAdjustmentLogsProperty()
+    {
+        if (! $this->adjustmentContentId) {
+            return collect();
+        }
+
+        return AdjustmentLog::with('user')
+            ->where('content_id', $this->adjustmentContentId)
+            ->orderBy('created_at', 'desc')
+            ->get();
     }
 }

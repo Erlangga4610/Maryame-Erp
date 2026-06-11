@@ -104,6 +104,16 @@ class Content extends Model
         return $this->hasOne(TiktokQc::class, 'content_id');
     }
 
+    public function versions()
+    {
+        return $this->hasMany(ContentVersion::class);
+    }
+
+    public function adjustmentLogs()
+    {
+        return $this->hasMany(AdjustmentLog::class);
+    }
+
     public function getFullPublishDateAttribute(): ?string
     {
         if (! $this->publish_date) {

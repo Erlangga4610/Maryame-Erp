@@ -16,6 +16,12 @@ class Products extends Component
 
     public $editId = null;
 
+    public $showDeleteModal = false;
+
+    public $deleteId = null;
+
+    public $deleteName = '';
+
     public $sku = '';
 
     public $name = '';
@@ -107,7 +113,22 @@ class Products extends Component
         $this->closeModal();
     }
 
-    public function delete($id)
+    public function confirmDelete($id)
+    {
+        $product = Product::findOrFail($id);
+        $this->deleteId = $product->id;
+        $this->deleteName = $product->name;
+        $this->showDeleteModal = true;
+    }
+
+    public function cancelDelete()
+    {
+        $this->showDeleteModal = false;
+        $this->deleteId = null;
+        $this->deleteName = '';
+    }
+
+    public function executeDelete()
     {
         if (! $this->canEdit()) {
             flash()->error('Anda tidak memiliki izin untuk menghapus data.');
@@ -115,8 +136,9 @@ class Products extends Component
             return;
         }
 
-        Product::findOrFail($id)->delete();
+        Product::findOrFail($this->deleteId)->delete();
         flash()->success('Produk berhasil dihapus!');
+        $this->cancelDelete();
     }
 
     public function closeModal()
