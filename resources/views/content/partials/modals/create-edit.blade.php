@@ -256,9 +256,11 @@
                                 <input type="file" wire:model="finalAsset" accept="image/*,video/*" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 dark:file:bg-pink-900/30 dark:file:text-pink-300" />
                                 <flux:error name="finalAsset" />
                                 @if($existingFinalAsset)
-                                    <div class="mt-2 flex items-center gap-2 text-sm text-zinc-500">
-                                        <flux:icon.paper-clip class="size-4" />
-                                        <span>{{ \Illuminate\Support\Str::after($existingFinalAsset, '/') }}</span>
+                                    <div class="mt-2 flex items-center gap-2 text-sm">
+                                        <a href="{{ \Illuminate\Support\Facades\Storage::url($existingFinalAsset) }}" target="_blank" class="inline-flex items-center gap-1.5 text-pink-600 dark:text-pink-400 hover:underline">
+                                            <flux:icon.paper-clip class="size-4" />
+                                            <span>{{ \Illuminate\Support\Str::after($existingFinalAsset, '/') }}</span>
+                                        </a>
                                     </div>
                                 @endif
                                 <div wire:loading wire:target="finalAsset" class="mt-2 text-sm text-pink-600">Uploading...</div>
@@ -277,9 +279,8 @@
                                 <input type="file" wire:model="thumbnail" accept="image/*" class="block w-full text-sm text-zinc-500 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-pink-50 file:text-pink-700 hover:file:bg-pink-100 dark:file:bg-pink-900/30 dark:file:text-pink-300" />
                                 <flux:error name="thumbnail" />
                                 @if($existingThumbnail)
-                                    <div class="mt-2 flex items-center gap-2 text-sm text-zinc-500">
-                                        <flux:icon.paper-clip class="size-4" />
-                                        <span>{{ \Illuminate\Support\Str::after($existingThumbnail, '/') }}</span>
+                                    <div class="mt-2">
+                                        <img src="{{ \Illuminate\Support\Facades\Storage::url($existingThumbnail) }}" class="h-20 rounded object-cover border border-zinc-200 dark:border-zinc-600" alt="current thumbnail" />
                                     </div>
                                 @endif
                                 <div wire:loading wire:target="thumbnail" class="mt-2 text-sm text-pink-600">Uploading...</div>

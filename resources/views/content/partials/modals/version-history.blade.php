@@ -8,8 +8,9 @@
             @if($versions->isEmpty())
                 <p class="text-zinc-500 text-sm">Belum ada riwayat versi.</p>
             @else
-                <div class="space-y-3">
+                <div class="space-y-3 max-h-[60vh] overflow-y-auto">
                     @foreach($versions as $version)
+                        @php $snapshot = $version->data; @endphp
                         <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-4">
                             <div class="flex items-center justify-between mb-2">
                                 <span class="text-sm font-semibold text-zinc-800 dark:text-white">v{{ $version->version }}</span>
@@ -20,16 +21,30 @@
                                     @endif
                                 </span>
                             </div>
-                            <div class="text-xs text-zinc-500 space-y-1">
-                                @php $snapshot = $version->data; @endphp
-                                @if(isset($snapshot['theme']))
-                                    <div><span class="font-medium">Tema:</span> {{ $snapshot['theme'] }}</div>
-                                @endif
+                            <div class="text-xs text-zinc-500 dark:text-zinc-400 space-y-1.5">
                                 @if(isset($snapshot['content_code']))
-                                    <div><span class="font-medium">Kode:</span> {{ $snapshot['content_code'] }}</div>
+                                    <div class="flex items-center gap-2">
+                                        <span class="font-medium text-zinc-400">Kode:</span>
+                                        <span class="font-mono">{{ $snapshot['content_code'] }}</span>
+                                    </div>
+                                @endif
+                                @if(isset($snapshot['theme']))
+                                    <div><span class="font-medium text-zinc-400">Tema:</span> {{ $snapshot['theme'] }}</div>
                                 @endif
                                 @if(isset($snapshot['status']))
-                                    <div><span class="font-medium">Status:</span> {{ $snapshot['status'] }}</div>
+                                    <div>
+                                        <span class="font-medium text-zinc-400">Status:</span>
+                                        <span class="bg-zinc-100 dark:bg-zinc-700 px-1.5 py-0.5 rounded">{{ $snapshot['status'] }}</span>
+                                    </div>
+                                @endif
+                                @if(isset($snapshot['priority']))
+                                    <div><span class="font-medium text-zinc-400">Priority:</span> {{ $snapshot['priority'] }}</div>
+                                @endif
+                                @if(isset($snapshot['final_asset_link']) && $snapshot['final_asset_link'])
+                                    <div><span class="font-medium text-zinc-400">Asset:</span> {{ \Illuminate\Support\Str::after($snapshot['final_asset_link'], '/') }}</div>
+                                @endif
+                                @if(isset($snapshot['thumbnail_link']) && $snapshot['thumbnail_link'])
+                                    <div><span class="font-medium text-zinc-400">Thumbnail:</span> {{ \Illuminate\Support\Str::after($snapshot['thumbnail_link'], '/') }}</div>
                                 @endif
                             </div>
                         </div>

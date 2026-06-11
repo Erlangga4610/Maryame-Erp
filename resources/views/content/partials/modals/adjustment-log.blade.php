@@ -8,10 +8,10 @@
             @if($logs->isEmpty())
                 <p class="text-zinc-500 text-sm">Belum ada perubahan.</p>
             @else
-                <div class="space-y-2">
+                <div class="space-y-2 max-h-[60vh] overflow-y-auto">
                     @foreach($logs as $log)
                         <div class="border border-zinc-200 dark:border-zinc-700 rounded-lg p-3">
-                            <div class="flex items-center justify-between mb-1">
+                            <div class="flex items-center justify-between mb-1.5">
                                 <span class="text-xs font-medium text-zinc-500 uppercase tracking-wide">
                                     {{ str_replace('_', ' ', $log->field) }}
                                 </span>
@@ -23,11 +23,11 @@
                             <div class="grid grid-cols-2 gap-2 text-xs">
                                 <div class="bg-red-50 dark:bg-red-900/20 rounded p-2 text-red-700 dark:text-red-300">
                                     <span class="font-medium">Sebelum:</span>
-                                    <span class="block mt-0.5">{{ $log->old_value ?? '-' }}</span>
+                                    <span class="block mt-0.5 break-words">{{ $log->old_value ?? '-' }}</span>
                                 </div>
                                 <div class="bg-green-50 dark:bg-green-900/20 rounded p-2 text-green-700 dark:text-green-300">
                                     <span class="font-medium">Sesudah:</span>
-                                    <span class="block mt-0.5">{{ $log->new_value ?? '-' }}</span>
+                                    <span class="block mt-0.5 break-words">{{ $log->new_value ?? '-' }}</span>
                                 </div>
                             </div>
                         </div>

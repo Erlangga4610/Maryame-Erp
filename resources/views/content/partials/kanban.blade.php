@@ -55,7 +55,12 @@
 
                             <div class="mt-1.5 flex items-center gap-2 text-[10px] text-zinc-400">
                                 @if($content->thumbnail_link)
-                                    <span class="truncate max-w-[80px]">{{ \Illuminate\Support\Str::after($content->thumbnail_link, '/') }}</span>
+                                    <img src="{{ \Illuminate\Support\Facades\Storage::url($content->thumbnail_link) }}" class="size-6 rounded object-cover border border-zinc-200 dark:border-zinc-600" alt="thumb" />
+                                @endif
+                                @if($content->final_asset_link)
+                                    <a href="{{ \Illuminate\Support\Facades\Storage::url($content->final_asset_link) }}" target="_blank" class="hover:text-pink-600 dark:hover:text-pink-400" title="Download asset">
+                                        <flux:icon.paper-clip class="size-3" />
+                                    </a>
                                 @endif
                                 <button type="button" wire:click="openVersionModal({{ $content->id }})" class="hover:text-pink-600 dark:hover:text-pink-400 hover:underline">v{{ $content->version }}</button>
                                 <button type="button" wire:click="openAdjustmentModal({{ $content->id }})" class="hover:text-pink-600 dark:hover:text-pink-400 hover:underline">Log</button>

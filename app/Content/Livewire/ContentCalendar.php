@@ -269,7 +269,7 @@ class ContentCalendar extends Component
 
     public function openCreateModal()
     {
-        $this->reset('form');
+        $this->reset('form', 'finalAsset', 'thumbnail', 'existingFinalAsset', 'existingThumbnail');
         $this->resetValidation();
         $this->modalMode = 'create';
         $this->showModal = true;
@@ -329,11 +329,6 @@ class ContentCalendar extends Component
             $content = Content::findOrFail($this->contentId);
             $original = $content->fresh()->toArray();
             $content->update($data);
-
-            if ($this->finalAsset || $this->thumbnail) {
-                $content->version = $content->version + 1;
-                $content->save();
-            }
 
             $versionIncreased = false;
             $trackedFields = ['theme', 'caption', 'description', 'content_type', 'priority',

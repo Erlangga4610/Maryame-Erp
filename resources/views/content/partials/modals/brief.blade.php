@@ -25,13 +25,20 @@
                     @if($briefContent->final_asset_link)
                         <div class="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-3 border border-zinc-200 dark:border-zinc-700">
                             <span class="text-[11px] font-medium text-zinc-400 uppercase tracking-wide">Final Asset</span>
-                            <div class="mt-1 text-xs text-zinc-600 dark:text-zinc-300 truncate">{{ \Illuminate\Support\Str::after($briefContent->final_asset_link, '/') }}</div>
+                            <div class="mt-2">
+                                <a href="{{ \Illuminate\Support\Facades\Storage::url($briefContent->final_asset_link) }}" target="_blank" class="inline-flex items-center gap-1.5 text-xs text-pink-600 dark:text-pink-400 hover:underline">
+                                    <flux:icon.paper-clip class="size-3.5" />
+                                    {{ \Illuminate\Support\Str::after($briefContent->final_asset_link, '/') }}
+                                </a>
+                            </div>
                         </div>
                     @endif
                     @if($briefContent->thumbnail_link)
                         <div class="bg-zinc-50 dark:bg-zinc-800/50 rounded-lg p-3 border border-zinc-200 dark:border-zinc-700">
                             <span class="text-[11px] font-medium text-zinc-400 uppercase tracking-wide">Thumbnail</span>
-                            <div class="mt-1 text-xs text-zinc-600 dark:text-zinc-300 truncate">{{ \Illuminate\Support\Str::after($briefContent->thumbnail_link, '/') }}</div>
+                            <div class="mt-2">
+                                <img src="{{ \Illuminate\Support\Facades\Storage::url($briefContent->thumbnail_link) }}" class="w-full h-24 rounded object-cover border border-zinc-200 dark:border-zinc-600" alt="thumbnail preview" />
+                            </div>
                         </div>
                     @endif
                 </div>
