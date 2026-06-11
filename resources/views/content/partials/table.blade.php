@@ -44,8 +44,14 @@
                     </flux:table.cell>
 
                     @php
-                        $mcApproval = $content->approvals->where('stage', 'mc_bm')->first();
+                        $cspApproval = $content->approvals->where('stage', 'csp')->first();
+                        $smsApproval = $content->approvals->where('stage', 'sms')->first();
+                        $rndApproval = $content->approvals->where('stage', 'rnd')->first();
                         $legalApproval = $content->approvals->where('stage', 'legal')->first();
+                        $allDone = $cspApproval?->status === 'approved'
+                            && $smsApproval?->status === 'approved'
+                            && (!$rndApproval || $rndApproval->status === 'approved')
+                            && (!$legalApproval || $legalApproval->status === 'approved');
                     @endphp
 
                     <flux:table.cell>
@@ -69,10 +75,11 @@
                             </flux:button>
 
                             @if($content->status->value === 'draft')
-                                <flux:button size="sm" variant="outline" wire:click="submitForApproval({{ $content->id }})">
-                                    Submit
-                                </flux:button>
-
+                                @if($isCw)
+                                    <flux:button size="sm" variant="outline" wire:click="submitForApproval({{ $content->id }})">
+                                        Submit
+                                    </flux:button>
+                                @endif
                                 <flux:button size="sm" variant="danger" wire:click="confirmDelete({{ $content->id }})">
                                     Hapus
                                 </flux:button>
@@ -94,18 +101,42 @@
                             @endif
 
                             @if($content->status->value === 'ready_review')
-                                @if($userRole === 'MC_BM' && $mcApproval && $mcApproval->status === 'pending')
-                                    <flux:button size="sm" variant="primary" color="green" wire:click="confirmApprove({{ $content->id }}, 'mc_bm')">
-                                        Approve
-                                    </flux:button>
-                                @elseif($userRole === 'Legal' && $legalApproval && $legalApproval->status === 'pending' && $mcApproval?->status === 'approved')
-                                    <flux:button size="sm" variant="primary" color="green" wire:click="confirmApprove({{ $content->id }}, 'legal')">
-                                        Approve
-                                    </flux:button>
+                                @php
+                                    $myStage = match($userRole) {
+                                        'CSP' => 'csp',
+                                        'SMS' => 'sms',
+                                        'RnD' => 'rnd',
+                                        'Legal' => 'legal',
+                                        default => null,
+                                    };
+                                    if ($userRole === 'Super Admin') {
+                                        $pendingStage = $content->approvals->where('status', 'pending')->first();
+                                        $myStage = $pendingStage?->stage;
+                                    }
+                                @endphp
+
+                                @if($myStage && ($approval = $content->approvals->where('stage', $myStage)->first()) && $approval->status === 'pending')
+                                    @php
+                                        $prevStage = match($myStage) {
+                                            'csp' => null,
+                                            'sms' => 'csp',
+                                            'rnd' => 'sms',
+                                            'legal' => $rndApproval ? 'rnd' : 'sms',
+                                            default => null,
+                                        };
+                                        $prevApproved = !$prevStage || $content->approvals->where('stage', $prevStage)->first()?->status === 'approved';
+                                    @endphp
+                                    @if($prevApproved)
+                                        <flux:button size="sm" variant="primary" color="green" wire:click="confirmApprove({{ $content->id }}, '{{ $myStage }}')">
+                                            Approve
+                                        </flux:button>
+                                    @else
+                                        <flux:badge size="sm" color="amber">Menunggu</flux:badge>
+                                    @endif
+                                @elseif($allDone)
+                                    <flux:badge size="sm" color="green">Approved</flux:badge>
                                 @else
-                                    <flux:badge size="sm" :color="$mcApproval?->status === 'approved' && $legalApproval?->status === 'approved' ? 'green' : 'amber'">
-                                        {{ $mcApproval?->status === 'approved' && $legalApproval?->status === 'approved' ? 'Approved' : 'Pending' }}
-                                    </flux:badge>
+                                    <flux:badge size="sm" color="amber">Pending</flux:badge>
                                 @endif
                             @endif
                         </div>

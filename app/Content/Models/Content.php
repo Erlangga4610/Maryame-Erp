@@ -48,15 +48,44 @@ class Content extends Model
         'copy_brief',
         'visual_brief',
         'video_brief',
+        'angle',
+        'positioning',
+        'target_audience',
+        'key_message',
+        'tone',
+        'aspect_ratio',
+        'resolution',
+        'duration',
+        'format_file',
+        'hashtag',
+        'audio_guidance',
+        'originality_instruction',
+        'thumbnail_note',
+        'is_brief_final',
+        'brief_finalized_at',
+        'brief_finalized_by',
+        'is_blocked',
+        'blocked_reason',
+        'blocked_by',
+        'blocked_at',
+        'is_briefed',
+        'briefed_by',
+        'briefed_at',
     ];
 
     protected $casts = [
         'has_claim' => 'boolean',
         'is_sensitive' => 'boolean',
+        'is_brief_final' => 'boolean',
+        'is_blocked' => 'boolean',
+        'is_briefed' => 'boolean',
+        'blocked_at' => 'datetime',
+        'briefed_at' => 'datetime',
         'publish_date' => 'date',
         'publish_time' => 'datetime:H:i',
         'deadline_produksi' => 'date',
         'deadline_approval' => 'date',
+        'brief_finalized_at' => 'datetime',
         'status' => ContentStatus::class,
         'content_type' => ContentType::class,
         'format' => ContentFormat::class,
@@ -102,6 +131,11 @@ class Content extends Model
     public function tiktokQc()
     {
         return $this->hasOne(TiktokQc::class, 'content_id');
+    }
+
+    public function briefFinalizer()
+    {
+        return $this->belongsTo(User::class, 'brief_finalized_by');
     }
 
     public function versions()

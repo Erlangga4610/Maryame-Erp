@@ -31,23 +31,27 @@
                 {{ $modalMode === 'create' ? 'Buat Konten Baru' : 'Edit Konten' }}
             </h2>
 
-            <div class="flex gap-1 mb-5 border-b border-zinc-200 dark:border-zinc-700">
-                <button type="button" @click="tab = 'detail'" :class="tab === 'detail' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors">
+            <div class="flex gap-1 mb-5 border-b border-zinc-200 dark:border-zinc-700 overflow-x-auto">
+                <button type="button" @click="tab = 'detail'" :class="tab === 'detail' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap">
                     Detail
                 </button>
-                <button type="button" @click="tab = 'copy'" :class="tab === 'copy' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors">
-                    Copy Brief
+                <button type="button" @click="tab = 'strategic'" :class="tab === 'strategic' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap">
+                    Strategic Brief @if(!$isCsp)<span class="text-[10px] text-zinc-400 ml-1">(read-only)</span>@endif
                 </button>
-                <button type="button" @click="tab = 'visual'" :class="tab === 'visual' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors">
-                    Visual Brief
+                <button type="button" @click="tab = 'technical'" :class="tab === 'technical' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap">
+                    Technical Brief @if(!$isSms)<span class="text-[10px] text-zinc-400 ml-1">(read-only)</span>@endif
                 </button>
-                <button type="button" @click="tab = 'video'" :class="tab === 'video' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors">
-                    Video Brief
-                </button>
-                <button type="button" @click="tab = 'asset'" :class="tab === 'asset' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors">
+                <button type="button" @click="tab = 'asset'" :class="tab === 'asset' ? 'border-b-2 border-pink-600 text-pink-600' : 'text-zinc-500 dark:text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-300'" class="px-3 py-2 text-sm font-medium transition-colors whitespace-nowrap">
                     Asset
                 </button>
             </div>
+
+            @if($isBriefFinal && $modalMode === 'edit')
+                <div class="mb-4 px-4 py-2 bg-green-50 dark:bg-green-900/20 border border-green-200 dark:border-green-800 rounded-lg text-sm text-green-700 dark:text-green-300 flex items-center gap-2">
+                    <flux:icon.check-circle class="size-4" />
+                    Brief telah difinalisasi — field strategis & teknis tidak bisa diubah.
+                </div>
+            @endif
 
             <form wire:submit="save" class="space-y-6">
                 <div x-show="tab === 'detail'" x-cloak>
@@ -182,63 +186,169 @@
                     </div>
                 </div>
 
-                <div x-show="tab === 'copy'" x-cloak>
-                    <div>
+                <div x-show="tab === 'strategic'" x-cloak>
+                    <div class="space-y-4">
                         <div class="flex items-center gap-2 mb-1">
                             <div class="size-2 rounded-full bg-pink-500"></div>
-                            <h3 class="text-base font-semibold text-zinc-800 dark:text-white">Copy Brief</h3>
+                            <h3 class="text-base font-semibold text-zinc-800 dark:text-white">Strategic Brief</h3>
+                            <span class="text-[11px] text-zinc-400 dark:text-zinc-500 italic">(CSP only)</span>
                         </div>
-                        <p class="text-sm text-zinc-400 dark:text-zinc-500 italic mb-3 ml-4">
-                            Arahan copywriting, tone of voice, CTA
-                        </p>
-                        <flux:field>
-                            <flux:textarea
-                                wire:model="form.copy_brief"
-                                rows="5"
-                                placeholder="• Tone profesional namun santai&#10;• Fokus pada promo diskon 50%&#10;• Sertakan CTA \"Beli Sekarang\"&#10;• Highlight benefit produk di paragraf pertama"
-                            />
-                            <flux:error name="form.copy_brief" />
-                        </flux:field>
+
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="col-span-2">
+                                <flux:field>
+                                    <flux:label>Angle</flux:label>
+                                     <flux:input wire:model="form.angle" placeholder="Angle konten..." :disabled="(!$isSuperAdmin && (!$isCsp || $isBriefFinal))" />
+                                    @if(!$isCsp || $isBriefFinal)<flux:error name="form.angle" />@endif
+                                </flux:field>
+                            </div>
+
+                            <flux:field>
+                                <flux:label>Positioning</flux:label>
+                                <flux:input wire:model="form.positioning" placeholder="Posisi brand..." :disabled="(!$isSuperAdmin && (!$isCsp || $isBriefFinal))" />
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>Target Audience</flux:label>
+                                <flux:input wire:model="form.target_audience" placeholder="Target audiens..." :disabled="(!$isSuperAdmin && (!$isCsp || $isBriefFinal))" />
+                            </flux:field>
+
+                            <div class="col-span-2">
+                                <flux:field>
+                                    <flux:label>Key Message</flux:label>
+                                    <flux:textarea wire:model="form.key_message" rows="2" placeholder="Pesan utama..." :disabled="(!$isSuperAdmin && (!$isCsp || $isBriefFinal))" />
+                                </flux:field>
+                            </div>
+
+                            <flux:field>
+                                <flux:label>Tone</flux:label>
+                                <flux:input wire:model="form.tone" placeholder="Tone of voice..." :disabled="(!$isSuperAdmin && (!$isCsp || $isBriefFinal))" />
+                            </flux:field>
+                        </div>
+
+                        <div class="border-t border-zinc-200 dark:border-zinc-700 pt-4">
+                            <div class="flex items-center gap-2 mb-1">
+                                <div class="size-2 rounded-full bg-zinc-300 dark:bg-zinc-600"></div>
+                                <h4 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Copy Direction</h4>
+                            </div>
+                            <flux:field>
+                                <flux:textarea
+                                    wire:model="form.copy_brief"
+                                    rows="4"
+                                    placeholder="• Tone profesional namun santai&#10;• Fokus pada promo diskon 50%&#10;• Sertakan CTA &quot;Beli Sekarang&quot;&#10;• Highlight benefit produk di paragraf pertama"
+                                    :disabled="(!$isSuperAdmin && (!$isCsp || $isBriefFinal))"
+                                />
+                            </flux:field>
+                        </div>
                     </div>
                 </div>
 
-                <div x-show="tab === 'visual'" x-cloak>
-                    <div>
+                <div x-show="tab === 'technical'" x-cloak>
+                    <div class="space-y-4">
                         <div class="flex items-center gap-2 mb-1">
                             <div class="size-2 rounded-full bg-pink-500"></div>
-                            <h3 class="text-base font-semibold text-zinc-800 dark:text-white">Visual Brief</h3>
+                            <h3 class="text-base font-semibold text-zinc-800 dark:text-white">Technical Brief</h3>
+                            <span class="text-[11px] text-zinc-400 dark:text-zinc-500 italic">(SMS only)</span>
                         </div>
-                        <p class="text-sm text-zinc-400 dark:text-zinc-500 italic mb-3 ml-4">
-                            Konsep visual, referensi desain, layout
-                        </p>
-                        <flux:field>
-                            <flux:textarea
-                                wire:model="form.visual_brief"
-                                rows="5"
-                                placeholder="• Flat lay style dengan background putih&#10;• Gunakan font sans-serif modern&#10;• Sertakan logo produk di pojok kanan atas&#10;• Warna pastel, hindari kontras tinggi"
-                            />
-                            <flux:error name="form.visual_brief" />
-                        </flux:field>
-                    </div>
-                </div>
 
-                <div x-show="tab === 'video'" x-cloak>
-                    <div>
-                        <div class="flex items-center gap-2 mb-1">
-                            <div class="size-2 rounded-full bg-pink-500"></div>
-                            <h3 class="text-base font-semibold text-zinc-800 dark:text-white">Video Brief</h3>
+                        <div class="grid grid-cols-2 gap-4">
+                            <flux:field>
+                                <flux:label>Aspect Ratio</flux:label>
+                                <flux:select wire:model="form.aspect_ratio" :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))">
+                                    <option value="">Pilih ratio</option>
+                                    <option value="1:1">1:1 (Square)</option>
+                                    <option value="4:5">4:5 (Portrait)</option>
+                                    <option value="9:16">9:16 (Story/Reels)</option>
+                                    <option value="16:9">16:9 (Landscape)</option>
+                                </flux:select>
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>Resolution</flux:label>
+                                <flux:select wire:model="form.resolution" :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))">
+                                    <option value="">Pilih resolusi</option>
+                                    <option value="720p">720p</option>
+                                    <option value="1080p">1080p (Full HD)</option>
+                                    <option value="4k">4K</option>
+                                </flux:select>
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>Durasi</flux:label>
+                                <flux:input wire:model="form.duration" placeholder="Contoh: 30 detik" :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))" />
+                            </flux:field>
+
+                            <flux:field>
+                                <flux:label>Format File</flux:label>
+                                <flux:select wire:model="form.format_file" :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))">
+                                    <option value="">Pilih format</option>
+                                    <option value="mp4">MP4</option>
+                                    <option value="jpg">JPG</option>
+                                    <option value="png">PNG</option>
+                                    <option value="gif">GIF</option>
+                                </flux:select>
+                            </flux:field>
+
+                            <div class="col-span-2">
+                                <flux:field>
+                                    <flux:label>Hashtag</flux:label>
+                                    <flux:input wire:model="form.hashtag" placeholder="#maryame #skincare" :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))" />
+                                </flux:field>
+                            </div>
+
+                            <div class="col-span-2">
+                                <flux:field>
+                                    <flux:label>Audio Guidance</flux:label>
+                                    <flux:textarea wire:model="form.audio_guidance" rows="2" placeholder="Referensi musik, BGM, voice over..." :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))" />
+                                </flux:field>
+                            </div>
+
+                            <div class="col-span-2">
+                                <flux:field>
+                                    <flux:label>Originality Instruction</flux:label>
+                                    <flux:textarea wire:model="form.originality_instruction" rows="2" placeholder="Instruksi originality untuk platform..." :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))" />
+                                </flux:field>
+                            </div>
+
+                            <div class="col-span-2">
+                                <flux:field>
+                                    <flux:label>Thumbnail Note</flux:label>
+                                    <flux:textarea wire:model="form.thumbnail_note" rows="2" placeholder="Catatan untuk thumbnail..." :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))" />
+                                </flux:field>
+                            </div>
                         </div>
-                        <p class="text-sm text-zinc-400 dark:text-zinc-500 italic mb-3 ml-4">
-                            Durasi, struktur scene, transisi, BGM
-                        </p>
-                        <flux:field>
-                            <flux:textarea
-                                wire:model="form.video_brief"
-                                rows="5"
-                                placeholder="• Video 30 detik, format vertikal 9:16&#10;• Hook 3 detik pertama dengan visual produk&#10;• Demo produk 15 detik dari berbagai angle&#10;• Tutup dengan CTA 5 detik + logo"
-                            />
-                            <flux:error name="form.video_brief" />
-                        </flux:field>
+
+                        <div class="border-t border-zinc-200 dark:border-zinc-700 pt-4 space-y-4">
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <div class="size-2 rounded-full bg-zinc-300 dark:bg-zinc-600"></div>
+                                    <h4 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Visual Direction</h4>
+                                </div>
+                                <flux:field>
+                                    <flux:textarea
+                                        wire:model="form.visual_brief"
+                                        rows="4"
+                                        placeholder="• Flat lay style dengan background putih&#10;• Gunakan font sans-serif modern&#10;• Sertakan logo produk di pojok kanan atas&#10;• Warna pastel, hindari kontras tinggi"
+                                        :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))"
+                                    />
+                                </flux:field>
+                            </div>
+
+                            <div>
+                                <div class="flex items-center gap-2 mb-1">
+                                    <div class="size-2 rounded-full bg-zinc-300 dark:bg-zinc-600"></div>
+                                    <h4 class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Video Direction</h4>
+                                </div>
+                                <flux:field>
+                                    <flux:textarea
+                                        wire:model="form.video_brief"
+                                        rows="4"
+                                        placeholder="• Video 30 detik, format vertikal 9:16&#10;• Hook 3 detik pertama dengan visual produk&#10;• Demo produk 15 detik dari berbagai angle&#10;• Tutup dengan CTA 5 detik + logo"
+                                        :disabled="(!$isSuperAdmin && (!$isSms || $isBriefFinal))"
+                                    />
+                                </flux:field>
+                            </div>
+                        </div>
                     </div>
                 </div>
 

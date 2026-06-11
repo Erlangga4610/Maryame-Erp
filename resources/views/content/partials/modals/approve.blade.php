@@ -1,7 +1,7 @@
 <flux:modal name="approve-modal" wire:model="showApproveModal" class="w-md" wire:key="approve-modal">
     <div class="p-6 space-y-4">
         <h3 class="text-lg font-semibold text-zinc-800 dark:text-white">
-            {{ $approveStage === 'legal' ? 'Approval Legal' : 'Approval MC/BM' }}
+            Approval {{ strtoupper($approveStage) }}
         </h3>
 
         <div>

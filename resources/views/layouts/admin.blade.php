@@ -31,6 +31,7 @@
             <flux:navbar.item icon="home" href="/dashboard" :current="request()->routeIs('dashboard')">Dashboard</flux:navbar.item>
             <flux:navbar.item icon="calendar" href="/contents" :current="request()->routeIs('contents.*')">Content Calendar</flux:navbar.item>
             <flux:navbar.item icon="inbox" href="/approval-inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:navbar.item>
+            <flux:navbar.item icon="clock" href="/production-schedule" :current="request()->routeIs('production.*')">Production Schedule</flux:navbar.item>
 
             <flux:separator vertical variant="subtle" class="my-2" />
 
@@ -89,6 +90,7 @@
             <flux:sidebar.item icon="home" href="/dashboard" :current="request()->routeIs('dashboard')">Dashboard</flux:sidebar.item>
             <flux:sidebar.item icon="calendar" href="/contents" :current="request()->routeIs('contents.*')">Content Calendar</flux:sidebar.item>
             <flux:sidebar.item icon="inbox" href="/approval-inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:sidebar.item>
+            <flux:sidebar.item icon="clock" href="/production-schedule" :current="request()->routeIs('production.*')">Production Schedule</flux:sidebar.item>
 
             <flux:sidebar.group expandable heading="Master Data">
                 <flux:sidebar.item href="/master-data/platforms">Platforms</flux:sidebar.item>
@@ -115,6 +117,7 @@
                     <flux:navlist.item href="/dashboard" icon="home" :current="request()->routeIs('dashboard')">Dashboard</flux:navlist.item>
                     <flux:navlist.item href="/contents" icon="calendar" :current="request()->routeIs('contents.*')">Content Calendar</flux:navlist.item>
                     <flux:navlist.item href="/approval-inbox" icon="inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:navlist.item>
+                    <flux:navlist.item href="/production-schedule" icon="clock" :current="request()->routeIs('production.*')">Production Schedule</flux:navlist.item>
 
                     <flux:separator />
 

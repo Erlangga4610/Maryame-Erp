@@ -3,10 +3,17 @@
         <div>
             <h2 class="text-xl font-bold text-zinc-800 dark:text-white">Approval Inbox</h2>
             <p class="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-                @if($userRole === 'MC_BM')
-                    Konten yang menunggu approval MC/BM
-                @elseif($userRole === 'Legal')
-                    Konten yang menunggu approval Legal
+                @php $stageLabel = match($userRole) {
+                    'CSP' => 'CSP',
+                    'SMS' => 'SMS',
+                    'RnD' => 'RnD',
+                    'Legal' => 'Legal',
+                    default => null,
+                }; @endphp
+                @if($userRole === 'Super Admin')
+                    Semua konten yang menunggu approval (Super Admin)
+                @elseif($stageLabel)
+                    Konten yang menunggu approval {{ $stageLabel }}
                 @else
                     Semua konten yang menunggu approval
                 @endif
@@ -15,7 +22,9 @@
 
         <flux:select wire:model.live="filterStage" class="w-44">
             <option value="">Semua Stage</option>
-            <option value="mc_bm">MC/BM</option>
+            <option value="csp">CSP</option>
+            <option value="sms">SMS</option>
+            <option value="rnd">RnD</option>
             <option value="legal">Legal</option>
         </flux:select>
     </div>
@@ -29,10 +38,12 @@
     @else
         <div class="space-y-3">
             @foreach($contents as $content)
-                @php
-                    $mc = $content->approvals->where('stage', 'mc_bm')->first();
-                    $legal = $content->approvals->where('stage', 'legal')->first();
-                @endphp
+                    @php
+                        $cspApproval = $content->approvals->where('stage', 'csp')->first();
+                        $smsApproval = $content->approvals->where('stage', 'sms')->first();
+                        $rndApproval = $content->approvals->where('stage', 'rnd')->first();
+                        $legalApproval = $content->approvals->where('stage', 'legal')->first();
+                    @endphp
 
                 <div class="rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-4">
                     <div class="flex items-start justify-between gap-4">
@@ -57,16 +68,14 @@
                             </div>
 
                             <div class="flex items-center gap-3 mt-3">
-                                @if($mc)
-                                    <flux:badge size="sm" :color="$mc->status === 'approved' ? 'green' : ($mc->status === 'revision' ? 'red' : 'amber')">
-                                        MC/BM: {{ ucfirst($mc->status) }}
-                                    </flux:badge>
-                                @endif
-                                @if($legal)
-                                    <flux:badge size="sm" :color="$legal->status === 'approved' ? 'green' : ($legal->status === 'revision' ? 'red' : 'amber')">
-                                        Legal: {{ ucfirst($legal->status) }}
-                                    </flux:badge>
-                                @endif
+                                @foreach(['csp' => 'CSP', 'sms' => 'SMS', 'rnd' => 'RnD', 'legal' => 'Legal'] as $stageKey => $stageLabel)
+                                    @php $a = $content->approvals->where('stage', $stageKey)->first(); @endphp
+                                    @if($a)
+                                        <flux:badge size="sm" :color="$a->status === 'approved' ? 'green' : ($a->status === 'revision' ? 'red' : 'amber')">
+                                            {{ $stageLabel }}: {{ ucfirst($a->status) }}
+                                        </flux:badge>
+                                    @endif
+                                @endforeach
                             </div>
                         </div>
 
@@ -75,10 +84,30 @@
                                 Detail
                             </flux:button>
 
-                            @if(($userRole === 'MC_BM' && $mc && $mc->status === 'pending') || ($userRole === 'Legal' && $legal && $legal->status === 'pending' && $mc?->status === 'approved'))
-                                <flux:button size="sm" variant="primary" color="green" wire:click="confirmApprove({{ $content->id }}, '{{ $userRole === 'MC_BM' ? 'mc_bm' : 'legal' }}')">
+                            @php
+                                $stageMap = ['CSP' => 'csp', 'SMS' => 'sms', 'RnD' => 'rnd', 'Legal' => 'legal'];
+                                $myStage = $stageMap[$userRole] ?? null;
+                                $myApproval = $myStage ? $content->approvals->where('stage', $myStage)->first() : null;
+                                $prevStage = match($myStage) {
+                                    'csp' => null,
+                                    'sms' => 'csp',
+                                    'rnd' => 'sms',
+                                    'legal' => $rndApproval ? 'rnd' : 'sms',
+                                    default => null,
+                                };
+                                $prevApproved = !$prevStage || $content->approvals->where('stage', $prevStage)->first()?->status === 'approved';
+                            @endphp
+                            @if($myApproval && $myApproval->status === 'pending' && $prevApproved)
+                                <flux:button size="sm" variant="primary" color="green" wire:click="confirmApprove({{ $content->id }}, '{{ $myStage }}')">
                                     Approve
                                 </flux:button>
+                            @elseif($userRole === 'Super Admin')
+                                @php $pendingStage = $content->approvals->where('status', 'pending')->first(); @endphp
+                                @if($pendingStage)
+                                    <flux:button size="sm" variant="primary" color="green" wire:click="confirmApprove({{ $content->id }}, '{{ $pendingStage->stage }}')">
+                                        Approve ({{ strtoupper($pendingStage->stage) }})
+                                    </flux:button>
+                                @endif
                             @endif
                         </div>
                     </div>
@@ -91,7 +120,7 @@
     <flux:modal name="approve-inbox-modal" wire:model="showApproveModal" class="w-md" wire:key="approve-inbox-modal">
         <div class="p-6 space-y-4">
             <h3 class="text-lg font-semibold text-zinc-800 dark:text-white">
-                {{ $approveStage === 'legal' ? 'Approval Legal' : 'Approval MC/BM' }}
+                Approval {{ strtoupper($approveStage) }}
             </h3>
 
             <div>

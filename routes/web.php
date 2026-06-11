@@ -8,6 +8,7 @@ use App\MasterData\Livewire\Campaigns;
 use App\MasterData\Livewire\Platforms;
 use App\MasterData\Livewire\Products;
 use App\MasterData\Livewire\Users;
+use App\Production\Livewire\ProductionSchedule;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,6 +31,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/contents', ContentCalendar::class)->name('contents.index');
 
     Route::get('/approval-inbox', ApprovalInbox::class)->name('approval.inbox');
+
+    Route::get('/production-schedule', ProductionSchedule::class)->name('production.schedule');
 
     Route::get('/master-data/platforms', Platforms::class)->name('master-data.platforms');
     Route::get('/master-data/products', Products::class)->name('master-data.products');

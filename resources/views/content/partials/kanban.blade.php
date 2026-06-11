@@ -35,17 +35,21 @@
                                 <span class="truncate">{{ $content->picCopy?->name ?? '-' }}</span>
                             </div>
 
-                            @php $hasBrief = $content->copy_brief || $content->visual_brief || $content->video_brief; @endphp
-                            @if($hasBrief)
-                                <div class="flex items-center gap-1 mt-1">
-                                    <button type="button" wire:click="openBriefModal({{ $content->id }})" class="text-[10px] text-pink-600 dark:text-pink-400 hover:underline">
-                                        @if($content->copy_brief)<span class="bg-pink-100 dark:bg-pink-900/30 px-1.5 py-0.5 rounded">Copy</span>@endif
-                                        @if($content->visual_brief)<span class="bg-pink-100 dark:bg-pink-900/30 px-1.5 py-0.5 rounded">Visual</span>@endif
-                                        @if($content->video_brief)<span class="bg-pink-100 dark:bg-pink-900/30 px-1.5 py-0.5 rounded">Video</span>@endif
-                                        <span class="ml-0.5 hover:underline">Lihat</span>
+                            <div class="flex items-center gap-1 mt-1">
+                                <button type="button" wire:click="openBriefModal({{ $content->id }})" class="text-[10px] text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1">
+                                    @if($content->is_brief_final)
+                                        <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">Brief ✓</span>
+                                    @else
+                                        <span class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">Brief</span>
+                                    @endif
+                                    <span>Lihat</span>
+                                </button>
+                                @if($isCsp && !$content->is_brief_final && $content->status->value === 'draft')
+                                    <button type="button" wire:click="finalizeBrief({{ $content->id }})" class="text-[10px] text-green-600 dark:text-green-400 hover:underline">
+                                        Finalkan
                                     </button>
-                                </div>
-                            @endif
+                                @endif
+                            </div>
 
                             @if($content->publish_date)
                                 <div class="mt-1.5 text-zinc-500 dark:text-zinc-400">
@@ -67,26 +71,64 @@
                             </div>
 
                             @php
-                                $mcApproval = $content->approvals->where('stage', 'mc_bm')->first();
+                                $cspApproval = $content->approvals->where('stage', 'csp')->first();
+                                $smsApproval = $content->approvals->where('stage', 'sms')->first();
+                                $rndApproval = $content->approvals->where('stage', 'rnd')->first();
                                 $legalApproval = $content->approvals->where('stage', 'legal')->first();
+                                $allDone = $cspApproval?->status === 'approved'
+                                    && $smsApproval?->status === 'approved'
+                                    && (!$rndApproval || $rndApproval->status === 'approved')
+                                    && (!$legalApproval || $legalApproval->status === 'approved');
                             @endphp
 
                             @if($content->status->value === 'ready_review')
                                 <div class="mt-1.5 flex flex-wrap gap-1">
-                                    @if($userRole === 'MC_BM' && $mcApproval && $mcApproval->status === 'pending')
-                                        <button type="button" wire:click="confirmApprove({{ $content->id }}, 'mc_bm')" class="text-xs text-white bg-green-600 hover:bg-green-700 px-2 py-0.5 rounded">Approve</button>
-                                        <button type="button" wire:click="confirmApprove({{ $content->id }}, 'mc_bm')" class="text-xs text-amber-600 border border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-2 py-0.5 rounded">Revisi</button>
-                                    @elseif($userRole === 'MC_BM' && $mcApproval && $mcApproval->status === 'approved')
-                                        <span class="text-xs text-green-600 dark:text-green-400">MC/BM ✓</span>
-                                    @elseif($userRole === 'Legal' && $legalApproval && $legalApproval->status === 'pending' && $mcApproval && $mcApproval->status === 'approved')
-                                        <button type="button" wire:click="confirmApprove({{ $content->id }}, 'legal')" class="text-xs text-white bg-green-600 hover:bg-green-700 px-2 py-0.5 rounded">Approve</button>
-                                        <button type="button" wire:click="confirmApprove({{ $content->id }}, 'legal')" class="text-xs text-amber-600 border border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-2 py-0.5 rounded">Revisi</button>
-                                    @elseif($userRole === 'Legal' && $legalApproval && $legalApproval->status === 'approved')
-                                        <span class="text-xs text-green-600 dark:text-green-400">Legal ✓</span>
-                                    @elseif($userRole === 'CSP' && $mcApproval?->status === 'approved' && $legalApproval?->status === 'approved')
+                                    @php
+                                        $myStage = match($userRole) {
+                                            'CSP' => 'csp',
+                                            'SMS' => 'sms',
+                                            'RnD' => 'rnd',
+                                            'Legal' => 'legal',
+                                            default => null,
+                                        };
+                                        if ($userRole === 'Super Admin') {
+                                            $pendingStage = $content->approvals->where('status', 'pending')->first();
+                                            $myStage = $pendingStage?->stage;
+                                        }
+                                    @endphp
+
+                                    @if($myStage && ($approval = $content->approvals->where('stage', $myStage)->first()) && $approval->status === 'pending')
+                                        @php
+                                            $prevStage = match($myStage) {
+                                                'csp' => null,
+                                                'sms' => 'csp',
+                                                'rnd' => 'sms',
+                                                'legal' => $rndApproval ? 'rnd' : 'sms',
+                                                default => null,
+                                            };
+                                            $prevApproved = !$prevStage || $content->approvals->where('stage', $prevStage)->first()?->status === 'approved';
+                                        @endphp
+                                        @if($prevApproved)
+                                            <button type="button" wire:click="confirmApprove({{ $content->id }}, '{{ $myStage }}')" class="text-xs text-white bg-green-600 hover:bg-green-700 px-2 py-0.5 rounded">Approve</button>
+                                            <button type="button" wire:click="confirmApprove({{ $content->id }}, '{{ $myStage }}')" class="text-xs text-amber-600 border border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-2 py-0.5 rounded">Revisi</button>
+                                        @else
+                                            <span class="text-xs text-amber-600 dark:text-amber-400">⏳ Menunggu approval sebelumnya</span>
+                                        @endif
+                                    @elseif($myStage && ($approval = $content->approvals->where('stage', $myStage)->first()) && $approval->status === 'approved')
+                                        <span class="text-xs text-green-600 dark:text-green-400">{{ $myStage === 'rnd' ? 'RnD' : ucfirst($myStage) }} ✓</span>
+                                    @elseif($allDone)
                                         <flux:badge size="sm" color="green">Approved</flux:badge>
-                                    @elseif($userRole === 'CSP')
-                                        <span class="text-xs text-amber-600 dark:text-amber-400">⏳ Pending Approval</span>
+                                    @elseif(!$myStage || $myStage === 'CW')
+                                        @php
+                                            $stageLabels = [];
+                                            foreach (['csp', 'sms', 'rnd', 'legal'] as $s) {
+                                                $a = $content->approvals->where('stage', $s)->first();
+                                                if ($a) {
+                                                    $stageLabels[] = strtoupper($s) . ': ' . ucfirst($a->status);
+                                                }
+                                            }
+                                        @endphp
+                                        <span class="text-xs text-amber-600 dark:text-amber-400">⏳ {{ implode(' | ', $stageLabels) }}</span>
                                     @endif
                                 </div>
                             @endif
@@ -108,14 +150,18 @@
                                 </div>
                             @endif
 
-                            @if($canCreate && $content->status->value === 'draft')
+                            @if($content->status->value === 'draft')
                                 <div class="mt-1.5 flex items-center gap-2">
-                                    <button type="button" wire:click="submitForApproval({{ $content->id }})" class="text-xs text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 hover:underline transition-colors">
-                                        Submit Approval
-                                    </button>
-                                    <button type="button" wire:click="confirmDelete({{ $content->id }})" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:underline transition-colors">
-                                        Hapus
-                                    </button>
+                                    @if($isCw)
+                                        <button type="button" wire:click="submitForApproval({{ $content->id }})" class="text-xs text-pink-600 hover:text-pink-700 dark:text-pink-400 dark:hover:text-pink-300 hover:underline transition-colors">
+                                            Submit Approval
+                                        </button>
+                                    @endif
+                                    @if($canCreate)
+                                        <button type="button" wire:click="confirmDelete({{ $content->id }})" class="text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:underline transition-colors">
+                                            Hapus
+                                        </button>
+                                    @endif
                                 </div>
                             @endif
                         </div>

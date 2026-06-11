@@ -119,7 +119,22 @@ class ContentCalendar extends Component
         'copy_brief' => '',
         'visual_brief' => '',
         'video_brief' => '',
+        'angle' => '',
+        'positioning' => '',
+        'target_audience' => '',
+        'key_message' => '',
+        'tone' => '',
+        'aspect_ratio' => '',
+        'resolution' => '',
+        'duration' => '',
+        'format_file' => '',
+        'hashtag' => '',
+        'audio_guidance' => '',
+        'originality_instruction' => '',
+        'thumbnail_note' => '',
     ];
+
+    public $isBriefFinal = false;
 
     protected $rules = [
         'form.platform_id' => 'required|exists:platforms,id',
@@ -236,16 +251,22 @@ class ContentCalendar extends Component
         $platforms = Platform::where('is_active', true)->get();
         $statusOptions = ContentStatus::options();
 
+        $authUser = Auth::user();
+
         return view('content.content-calendar', [
             'contents' => $contents,
             'platforms' => $platforms,
             'statusOptions' => $statusOptions,
-            'canCreate' => Auth::user()?->hasRole('CSP'),
+            'canCreate' => $authUser?->isSuperAdmin() || $authUser?->hasRole('CSP') || $authUser?->hasRole('CW'),
             'kanbanColumns' => $kanbanColumns,
             'unscheduledItems' => $unscheduledItems,
             'assignees' => $assignees,
             'contentTypes' => $contentTypes,
             'userRole' => $userRole,
+            'isCsp' => $authUser?->isSuperAdmin() || $authUser?->hasRole('CSP'),
+            'isSms' => $authUser?->isSuperAdmin() || $authUser?->hasRole('SMS'),
+            'isCw' => $authUser?->isSuperAdmin() || $authUser?->hasRole('CW'),
+            'isSuperAdmin' => $authUser?->isSuperAdmin(),
         ])->layout('layouts.admin', ['title' => 'Content Calendar']);
     }
 
@@ -260,6 +281,12 @@ class ContentCalendar extends Component
 
         $content = Content::findOrFail($contentId);
         $targetStatus = $statusMap[$column] ?? null;
+
+        if ($targetStatus === 'in_production' && ! $content->is_brief_final) {
+            flash()->error('Brief harus difinalisasi terlebih dahulu sebelum produksi.');
+
+            return;
+        }
 
         if ($targetStatus) {
             $content->status = $targetStatus;
@@ -285,11 +312,15 @@ class ContentCalendar extends Component
             'platform_id', 'product_id', 'campaign_id', 'theme', 'caption',
             'description', 'pic_copy_id', 'pic_visual_id', 'pic_video_id',
             'copy_brief', 'visual_brief', 'video_brief',
+            'angle', 'positioning', 'target_audience', 'key_message', 'tone',
+            'aspect_ratio', 'resolution', 'duration', 'format_file', 'hashtag',
+            'audio_guidance', 'originality_instruction', 'thumbnail_note',
         ]);
         $raw['priority'] = $content->priority?->value ?? 'medium';
         $raw['publish_date'] = $content->publish_date?->format('Y-m-d') ?? '';
         $raw['deadline_produksi'] = $content->deadline_produksi?->format('Y-m-d') ?? '';
         $this->form = $raw;
+        $this->isBriefFinal = $content->is_brief_final;
         $this->existingFinalAsset = $content->final_asset_link;
         $this->existingThumbnail = $content->thumbnail_link;
         $this->resetValidation();
@@ -301,7 +332,12 @@ class ContentCalendar extends Component
     {
         $this->validate();
 
+        $user = Auth::user();
         $data = collect($this->form)->map(fn ($v) => $v === '' ? null : $v)->all();
+
+        $strategicFields = ['angle', 'positioning', 'target_audience', 'key_message', 'tone'];
+        $technicalFields = ['aspect_ratio', 'resolution', 'duration', 'format_file', 'hashtag',
+            'audio_guidance', 'originality_instruction', 'thumbnail_note'];
 
         if ($this->finalAsset) {
             $data['final_asset_link'] = $this->finalAsset->store('assets', 'public');
@@ -321,19 +357,49 @@ class ContentCalendar extends Component
                 'content_id' => $content->id,
                 'version' => 1,
                 'data' => $content->fresh()->toArray(),
-                'created_by' => Auth::id(),
+                'created_by' => $user->id,
             ]);
 
             flash()->success('Konten berhasil dibuat!');
         } else {
             $content = Content::findOrFail($this->contentId);
+
+            if ($user->isSuperAdmin()) {
+                // Super Admin can edit everything regardless of brief_final
+            } elseif ($content->is_brief_final) {
+                foreach ($strategicFields as $f) {
+                    unset($data[$f]);
+                }
+                foreach ($technicalFields as $f) {
+                    unset($data[$f]);
+                }
+                unset($data['copy_brief'], $data['visual_brief'], $data['video_brief']);
+            } else {
+                if (! $user->hasRole('CSP')) {
+                    foreach ($strategicFields as $f) {
+                        unset($data[$f]);
+                    }
+                    unset($data['copy_brief']);
+                }
+                if (! $user->hasRole('SMS')) {
+                    foreach ($technicalFields as $f) {
+                        unset($data[$f]);
+                    }
+                    unset($data['visual_brief'], $data['video_brief']);
+                }
+            }
+
             $original = $content->fresh()->toArray();
             $content->update($data);
 
             $versionIncreased = false;
             $trackedFields = ['theme', 'caption', 'description', 'content_type', 'priority',
                 'publish_date', 'deadline_produksi', 'pic_copy_id', 'pic_visual_id', 'pic_video_id',
-                'copy_brief', 'visual_brief', 'video_brief', 'final_asset_link', 'thumbnail_link'];
+                'copy_brief', 'visual_brief', 'video_brief', 'final_asset_link', 'thumbnail_link',
+                'angle', 'positioning', 'target_audience', 'key_message', 'tone',
+                'aspect_ratio', 'resolution', 'duration', 'format_file', 'hashtag',
+                'audio_guidance', 'originality_instruction', 'thumbnail_note',
+                'is_brief_final'];
 
             foreach ($trackedFields as $field) {
                 $old = $original[$field] ?? null;
@@ -342,7 +408,7 @@ class ContentCalendar extends Component
                 if ($old !== $new) {
                     AdjustmentLog::create([
                         'content_id' => $content->id,
-                        'user_id' => Auth::id(),
+                        'user_id' => $user->id,
                         'field' => $field,
                         'old_value' => is_bool($old) ? ($old ? '1' : '0') : $old,
                         'new_value' => is_bool($new) ? ($new ? '1' : '0') : $new,
@@ -359,7 +425,7 @@ class ContentCalendar extends Component
                     'content_id' => $content->id,
                     'version' => $content->version,
                     'data' => $content->fresh()->toArray(),
-                    'created_by' => Auth::id(),
+                    'created_by' => $user->id,
                 ]);
             }
 
@@ -367,7 +433,7 @@ class ContentCalendar extends Component
         }
 
         $this->showModal = false;
-        $this->reset('form', 'finalAsset', 'thumbnail', 'existingFinalAsset', 'existingThumbnail');
+        $this->reset('form', 'finalAsset', 'thumbnail', 'existingFinalAsset', 'existingThumbnail', 'isBriefFinal');
         $this->resetValidation();
     }
 
@@ -394,7 +460,7 @@ class ContentCalendar extends Component
     {
         $content = Content::findOrFail($this->deleteContentId);
 
-        if (Auth::user()->hasRole('CSP') && $content->status === ContentStatus::DRAFT) {
+        if ((Auth::user()->isSuperAdmin() || Auth::user()->hasRole('CSP') || Auth::user()->hasRole('CW')) && $content->status === ContentStatus::DRAFT) {
             $content->delete();
             flash()->success('Konten berhasil dihapus!');
         } else {
@@ -526,17 +592,20 @@ class ContentCalendar extends Component
     {
         $content = Content::findOrFail($id);
 
+        if (! Auth::user()->isSuperAdmin() && ! Auth::user()->hasRole('CW')) {
+            flash()->error('Hanya CW yang bisa submit konten untuk approval.');
+            return;
+        }
+
         $content->status = ContentStatus::READY_REVIEW;
         $content->save();
 
-        foreach (['mc_bm', 'legal'] as $stage) {
-            Approval::updateOrCreate(
-                ['content_id' => $content->id, 'stage' => $stage],
-                ['status' => ApprovalStatus::PENDING->value, 'approver_id' => null, 'notes' => null],
-            );
-        }
+        Approval::updateOrCreate(
+            ['content_id' => $content->id, 'stage' => 'csp'],
+            ['status' => ApprovalStatus::PENDING->value, 'approver_id' => null, 'notes' => null],
+        );
 
-        flash()->success('Konten dikirim untuk approval!');
+        flash()->success('Konten dikirim untuk approval (menunggu CSP)!');
     }
 
     public function confirmApprove($id, $stage)
@@ -566,12 +635,22 @@ class ContentCalendar extends Component
         $approval->notes = $this->approveNotes;
         $approval->save();
 
-        $allApproved = Approval::where('content_id', $this->approveContentId)
-            ->where('status', '!=', ApprovalStatus::APPROVED->value)
-            ->doesntExist();
+        $content = Content::findOrFail($this->approveContentId);
 
-        if ($allApproved) {
-            $content = Content::findOrFail($this->approveContentId);
+        $nextStage = match ($this->approveStage) {
+            'csp' => 'sms',
+            'sms' => $content->has_claim ? 'rnd' : ($content->is_sensitive ? 'legal' : null),
+            'rnd' => $content->is_sensitive ? 'legal' : null,
+            'legal' => null,
+            default => null,
+        };
+
+        if ($nextStage) {
+            Approval::updateOrCreate(
+                ['content_id' => $content->id, 'stage' => $nextStage],
+                ['status' => ApprovalStatus::PENDING->value, 'approver_id' => null, 'notes' => null],
+            );
+        } else {
             $content->status = ContentStatus::APPROVED;
             $content->save();
         }
@@ -597,6 +676,22 @@ class ContentCalendar extends Component
 
         flash()->success('Revisi diminta. Konten dikembalikan ke In Production.');
         $this->cancelApprove();
+    }
+
+    public function finalizeBrief($id)
+    {
+        if (! Auth::user()->isSuperAdmin() && ! Auth::user()->hasRole('CSP')) {
+            flash()->error('Hanya CSP yang bisa finalisasi brief.');
+            return;
+        }
+
+        $content = Content::findOrFail($id);
+        $content->is_brief_final = true;
+        $content->brief_finalized_at = now();
+        $content->brief_finalized_by = Auth::id();
+        $content->save();
+
+        flash()->success('Brief berhasil difinalisasi! Konten siap produksi.');
     }
 
     public function resetFilters()

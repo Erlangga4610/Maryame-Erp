@@ -176,11 +176,18 @@ Status flow: `draft → in_production → ready_review → approved → schedule
 - Current test count: 5 (ExampleTest — 2 route tests; ContentVersionTest — model existence, relations)
 - `TestCase.php` is empty (extends base Laravel)
 
+## Super Admin
+
+- Role `Super Admin` (rbac_tier=0) bypasses ALL role/permission gates
+- `Auth::user()->isSuperAdmin()` helper on User model
+- Can create/edit/delete any content, approve any stage, access all master data CRUD
+- Assigned to `admin@maryame.com` alongside CSP role
+
 ## Login credentials (dev)
 
 | Email | Password | Role |
 |---|---|---|
-| `admin@maryame.com` | `password123` | CSP (Tier 1 — edit) |
+| `admin@maryame.com` | `password123` | **Super Admin** (bypass all role gates) + CSP |
 | `mc_bm@maryame.com` | `password123` | MC/BM (Tier 3 — view) |
 | `legal@maryame.com` | `password123` | Legal (Tier 2 — comment) |
 | `csp@maryame.com` | `password123` | CSP |

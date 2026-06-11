@@ -25,13 +25,21 @@ class ApprovalInbox extends Component
         $user = Auth::user();
         $userRole = $user?->roles->first()?->name;
 
+        $stageMap = [
+            'CSP' => 'csp',
+            'SMS' => 'sms',
+            'RnD' => 'rnd',
+            'Legal' => 'legal',
+        ];
+
+        $stage = $user?->isSuperAdmin() ? ($this->filterStage ?: null) : ($stageMap[$userRole] ?? null);
+
         $query = Content::with(['platform', 'picCopy', 'approvals'])
             ->where('status', 'ready_review');
 
-        if (in_array($userRole, ['MC_BM', 'Legal'])) {
-            $stage = $userRole === 'MC_BM' ? 'mc_bm' : 'legal';
+        if ($stage) {
             $query->whereHas('approvals', function ($q) use ($stage) {
-                $q->where('stage', $this->filterStage ?: $stage)
+                $q->where('stage', $stage)
                     ->where('status', 'pending');
             });
         } else {

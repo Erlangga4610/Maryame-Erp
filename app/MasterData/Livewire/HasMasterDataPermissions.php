@@ -8,6 +8,10 @@ trait HasMasterDataPermissions
 {
     public function canEdit(): bool
     {
+        if (Auth::user()?->isSuperAdmin()) {
+            return true;
+        }
+
         $tier = Auth::user()?->roles->first()?->rbac_tier;
 
         return $tier === 1;
@@ -15,6 +19,10 @@ trait HasMasterDataPermissions
 
     public function canView(): bool
     {
+        if (Auth::user()?->isSuperAdmin()) {
+            return true;
+        }
+
         return Auth::user()?->roles->first()?->rbac_tier !== null;
     }
 }
