@@ -2,6 +2,19 @@
 
 ERP Content Calendar untuk Maryamé — Laravel 13.15, Livewire 4.3, Flux Pro 2.14, Tailwind v4, PostgreSQL.
 
+## Branching
+
+| Branch | Domain | Alur |
+|--------|--------|------|
+| `ContentCalendar` | Perencanaan & produksi konten (kanban/table/calendar, brief, capacity, production schedule, My Tasks) | 1–5 |
+| `ApprovalPipeline` | QC & approval (QC queue, TikTok checklist, multi-level approve, revision) | 6–7 |
+| `PublishingReporting` | Publishing & reporting (schedule, publish, adjustment, dashboard) | 8–9 |
+| `AssetManagement` | Asset & version (upload, library, versioning, archive) | 10 |
+| `develop` | Integrasi fitur |
+| `main` | Production stable |
+
+**Aturan:** Kerjakan fitur di branch sesuai domain. Jika perubahan lintas modul, kerjakan di branch utama modul dan dokumentasikan dependency. Branch `ContentCalendar` adalah integration branch yang punya semua kode lengkap.
+
 ## Quick commands
 
 | Command | What it does |
@@ -37,6 +50,15 @@ Routes all point to Livewire components (no controllers):
 | `/dashboard` | `Dashboard` |
 | `/contents` | `ContentCalendar` (kanban/table/calendar) |
 | `/approval-inbox` | `ApprovalInbox` |
+| `/mix-tracker` | `MixTracker` |
+| `/my-tasks` | `MyTasks` |
+| `/calendar` | `CalendarManagement` |
+| `/production-schedule` | `ProductionSchedule` |
+| `/qc/{contentId}` | `TikTokQcManager` (ApprovalPipeline) |
+| `/approval/{contentId}/{stage}` | `ApprovalWorkflow` (ApprovalPipeline) |
+| `/publish/{contentId}` | `PublishingManager` (PublishingReporting) |
+| `/adjustment/{adjustmentId}` | `AdjustmentManager` (PublishingReporting) |
+| `/assets/{contentId}` | `AssetManager` (AssetManagement) |
 | `/master-data/{platforms,products,campaigns,users}` | `Platforms`, `Products`, `Campaigns`, `Users` |
 | `/login` | `Login` |
 
@@ -45,21 +67,45 @@ Layout: `resources/views/layouts/admin.blade.php` (Flux Pro pattern — header n
 ## Views structure
 
 ```
-resources/views/content/
+resources/views/livewire/content/
 ├── content-calendar.blade.php          # @include only
 ├── approval-inbox.blade.php
+├── my-tasks.blade.php
+├── mix-tracker.blade.php
+├── calendar-management.blade.php
 └── partials/
     ├── toolbar.blade.php               # view mode buttons + filters
     ├── kanban.blade.php                # kanban board + cards
     ├── table.blade.php                 # table view + pagination
     ├── calendar.blade.php              # unscheduled panel + calendar grid
+    ├── capacity.blade.php              # capacity planning
     └── modals/
-        ├── create-edit.blade.php       # form modal (5 tabs: Detail/Copy/Visual/Video/Asset)
+        ├── create-edit.blade.php       # form modal (5 tabs)
         ├── approve.blade.php           # approval modal
         ├── tiktok-qc.blade.php         # QC TikTok checklist
-        ├── version-history.blade.php   # version history (riwayat versi)
+        ├── version-history.blade.php   # version history
         ├── adjustment-log.blade.php    # per-field change log
-        └── delete.blade.php            # delete confirmation
+        ├── delete.blade.php            # delete confirmation
+        ├── schedule.blade.php          # schedule modal
+        ├── publish.blade.php           # publish modal
+        ├── post-publish-checklist.blade.php
+        ├── brief.blade.php             # brief modal
+        └── tabs/
+            ├── detail.blade.php
+            ├── strategic.blade.php
+            ├── technical.blade.php
+            └── asset.blade.php
+
+resources/views/livewire/approval-pipeline/
+├── tiktok-qc-manager.blade.php
+└── approval-workflow.blade.php
+
+resources/views/livewire/asset-management/
+└── asset-manager.blade.php
+
+resources/views/livewire/publishing-reporting/
+├── publishing-manager.blade.php
+└── adjustment-manager.blade.php
 ```
 
 ## Key packages
@@ -94,6 +140,21 @@ The following components do **not** exist in Flux 2.14 — use alternatives:
 - Kanban columns: To Do → In Progress → In Review → Done (mapped from content statuses)
 - Calendar drag-drop uses native HTML5 Drag & Drop API (not SortableJS)
 - Content codes auto-generated: `{PLATFORM-CODE}-{YYYY}-{MM}-{NNN}` (immutable via Observer, uses `withTrashed()` + `lockForUpdate()` in transaction)
+
+## Mapping Alur ke Branch
+
+| Alur | Branch |
+|------|--------|
+| 1 (Kalender) | ContentCalendar |
+| 2 (Capacity) | ContentCalendar |
+| 3 (Production Schedule) | ContentCalendar |
+| 4 (Brief) | ContentCalendar |
+| 5 (My Tasks) | ContentCalendar |
+| 6 (QC TikTok) | ApprovalPipeline |
+| 7 (Approval) | ApprovalPipeline |
+| 8 (Schedule & Publish) | PublishingReporting |
+| 9 (Adjustment) | PublishingReporting |
+| 10 (Asset) | AssetManagement |
 
 ## Approval pipeline (5 tahap)
 
