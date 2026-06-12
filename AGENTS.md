@@ -95,18 +95,19 @@ The following components do **not** exist in Flux 2.14 — use alternatives:
 - Calendar drag-drop uses native HTML5 Drag & Drop API (not SortableJS)
 - Content codes auto-generated: `{PLATFORM-CODE}-{YYYY}-{MM}-{NNN}` (immutable via Observer, uses `withTrashed()` + `lockForUpdate()` in transaction)
 
-## Approval pipeline (3-party)
+## Approval pipeline (5 tahap)
 
 ```
-CSP (create) → submit → ready_review → MC/BM approve → Legal approve → approved
-                                ↓ (revision)                      ↓ (all done)
-                            in_production                      approved
+draft → submit → ready_review → CW approve → CSP approve → SMS approve → (RnD if claim) → (Legal if sensitive) → approved
+                                    ↓ (revision)
+                                in_production
 ```
 
 - Approvals stored in `approvals` table (`content_id` + `stage` unique)
-- Stages: `mc_bm`, `legal` — both created on submit
-- Revision returns content to `in_production`
+- Stages: `cw`, `csp`, `sms`, `rnd` (if claim), `legal` (if sensitive) — created sequentially
+- Revision at any stage returns content to `in_production`
 - Approval Inbox (`/approval-inbox`) shows pending items per role
+- MC/BM does NOT approve content — they approve Major Adjustment (Alur 9)
 
 ## QC TikTok
 

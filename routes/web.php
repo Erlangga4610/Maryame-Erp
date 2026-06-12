@@ -12,6 +12,7 @@ use App\Livewire\MasterData\Platforms;
 use App\Livewire\MasterData\Products;
 use App\Livewire\MasterData\Users;
 use App\Livewire\Production\ProductionSchedule;
+use App\Livewire\RoleGuide;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -42,6 +43,8 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/mix-tracker', MixTracker::class)->name('mix-tracker');
 
     Route::get('/production-schedule', ProductionSchedule::class)->name('production.schedule');
+
+    Route::get('/role-guide', RoleGuide::class)->name('role-guide');
 
     Route::get('/master-data/platforms', Platforms::class)->name('master-data.platforms');
     Route::get('/master-data/products', Products::class)->name('master-data.products');

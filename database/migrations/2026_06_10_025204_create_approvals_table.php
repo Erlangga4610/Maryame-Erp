@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('content_id')->constrained()->cascadeOnDelete();
             $table->foreignId('approver_id')->nullable()->constrained('users')->nullOnDelete();
-            $table->string('stage', 20); // mc_bm, legal
+            $table->string('stage', 20); // cw, csp, sms, rnd, legal
             $table->string('status', 20)->default('pending'); // pending, approved, revision
             $table->text('notes')->nullable();
             $table->timestamps();

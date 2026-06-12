@@ -29,32 +29,12 @@
 
         <flux:navbar class="-mb-px max-lg:hidden">
             <flux:navbar.item icon="home" href="/dashboard" :current="request()->routeIs('dashboard')">Dashboard</flux:navbar.item>
-            <flux:navbar.item icon="calendar" href="/contents" :current="request()->routeIs('contents.*')">Content Calendar</flux:navbar.item>
-            <flux:navbar.item icon="clipboard-document-list" href="/my-tasks" :current="request()->routeIs('my-tasks')">My Tasks</flux:navbar.item>
-            <flux:navbar.item icon="calendar-days" href="/calendar" :current="request()->routeIs('calendar')">Calendar</flux:navbar.item>
-            <flux:navbar.item icon="chart-bar-square" href="/mix-tracker" :current="request()->routeIs('mix-tracker')">Mix Tracker</flux:navbar.item>
-            <flux:navbar.item icon="inbox" href="/approval-inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:navbar.item>
-            <flux:navbar.item icon="clock" href="/production-schedule" :current="request()->routeIs('production.*')">Production Schedule</flux:navbar.item>
-
-            <flux:separator vertical variant="subtle" class="my-2" />
-
-            <flux:dropdown class="max-lg:hidden">
-                <flux:navbar.item icon:trailing="chevron-down">Master Data</flux:navbar.item>
-
-                <flux:navmenu>
-                    <flux:navmenu.item href="/master-data/platforms">Platforms</flux:navmenu.item>
-                    <flux:navmenu.item href="/master-data/products">Products</flux:navmenu.item>
-                    <flux:navmenu.item href="/master-data/campaigns">Campaigns</flux:navmenu.item>
-                    <flux:navmenu.item href="/master-data/users">Users</flux:navmenu.item>
-                </flux:navmenu>
-            </flux:dropdown>
         </flux:navbar>
 
         <flux:spacer />
 
         <flux:navbar class="me-4">
             <flux:navbar.item icon="magnifying-glass" href="#" label="Search" />
-            <flux:navbar.item class="max-lg:hidden" icon="cog-6-tooth" href="#" label="Settings" />
         </flux:navbar>
 
         <flux:dropdown position="top" align="start">
@@ -110,7 +90,7 @@
 
         <flux:sidebar.nav>
             <flux:sidebar.item icon="cog-6-tooth" href="#">Settings</flux:sidebar.item>
-            <flux:sidebar.item icon="information-circle" href="#">Help</flux:sidebar.item>
+            <flux:sidebar.item icon="information-circle" href="/role-guide" :current="request()->routeIs('role-guide')">Role Guide</flux:sidebar.item>
         </flux:sidebar.nav>
     </flux:sidebar>
 
