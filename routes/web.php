@@ -1,18 +1,9 @@
 <?php
 
 use App\Livewire\Auth\Login;
-use App\Livewire\Content\ApprovalInbox;
-use App\Livewire\Content\CalendarManagement;
-use App\Livewire\Content\ContentCalendar;
-use App\Livewire\Content\MixTracker;
-use App\Livewire\Content\MyTasks;
 use App\Livewire\Dashboard\Dashboard;
-use App\Livewire\MasterData\Campaigns;
-use App\Livewire\MasterData\Platforms;
-use App\Livewire\MasterData\Products;
-use App\Livewire\MasterData\Users;
-use App\Livewire\Production\ProductionSchedule;
-use App\Livewire\RoleGuide;
+use App\Livewire\PublishingReporting\PublishingManager;
+use App\Livewire\PublishingReporting\AdjustmentManager;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -32,22 +23,7 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
-    Route::get('/contents', ContentCalendar::class)->name('contents.index');
+    Route::get('/publish/{contentId}', PublishingManager::class)->name('publish');
 
-    Route::get('/my-tasks', MyTasks::class)->name('my-tasks');
-
-    Route::get('/calendar', CalendarManagement::class)->name('calendar');
-
-    Route::get('/approval-inbox', ApprovalInbox::class)->name('approval.inbox');
-
-    Route::get('/mix-tracker', MixTracker::class)->name('mix-tracker');
-
-    Route::get('/production-schedule', ProductionSchedule::class)->name('production.schedule');
-
-    Route::get('/role-guide', RoleGuide::class)->name('role-guide');
-
-    Route::get('/master-data/platforms', Platforms::class)->name('master-data.platforms');
-    Route::get('/master-data/products', Products::class)->name('master-data.products');
-    Route::get('/master-data/campaigns', Campaigns::class)->name('master-data.campaigns');
-    Route::get('/master-data/users', Users::class)->name('master-data.users');
+    Route::get('/adjustment/{adjustmentId}', AdjustmentManager::class)->name('adjustment');
 });
