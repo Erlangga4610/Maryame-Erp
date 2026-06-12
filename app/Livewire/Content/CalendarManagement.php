@@ -8,6 +8,7 @@ use App\Content\Models\CalendarEntry;
 use App\Content\Models\Content;
 use App\Models\Platform;
 use App\Models\User;
+use App\Models\UserCapacitySetting;
 use Carbon\Carbon;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
@@ -73,6 +74,133 @@ class CalendarManagement extends Component
     {
         $this->currentMonth = now()->month;
         $this->currentYear = now()->year;
+        $this->loadCalendar();
+    }
+
+    public function isCapacityReady(): bool
+    {
+        $monthStart = Carbon::create($this->currentYear, $this->currentMonth, 1)->startOfWeek();
+        $monthEnd = Carbon::create($this->currentYear, $this->currentMonth, 1)->endOfMonth()->endOfWeek();
+
+        $contents = \App\Content\Models\Content::where(function ($q) use ($monthStart, $monthEnd) {
+            $q->whereBetween('deadline_produksi', [$monthStart, $monthEnd])
+                ->orWhereBetween('publish_date', [$monthStart, $monthEnd]);
+        })->get();
+
+        $weekStarts = collect();
+        $current = $monthStart->copy();
+        while ($current <= $monthEnd) {
+            $weekStarts->push($current->copy());
+            $current->addWeek();
+        }
+
+        foreach ($weekStarts as $weekStart) {
+            $weekEnd = $weekStart->copy()->endOfWeek();
+            $weekContents = $contents->filter(fn ($c) =>
+                ($c->deadline_produksi && $c->deadline_produksi->between($weekStart, $weekEnd))
+                || ($c->publish_date && $c->publish_date->between($weekStart, $weekEnd))
+            );
+
+            $userTotals = [];
+            foreach ($weekContents as $c) {
+                if ($c->est_copy_hours && $c->pic_copy_id) {
+                    $userTotals[$c->pic_copy_id] = ($userTotals[$c->pic_copy_id] ?? 0) + (float) $c->est_copy_hours;
+                }
+                if ($c->est_visual_hours && $c->pic_visual_id) {
+                    $userTotals[$c->pic_visual_id] = ($userTotals[$c->pic_visual_id] ?? 0) + (float) $c->est_visual_hours;
+                }
+                if ($c->est_video_hours && $c->pic_video_id) {
+                    $userTotals[$c->pic_video_id] = ($userTotals[$c->pic_video_id] ?? 0) + (float) $c->est_video_hours;
+                }
+            }
+
+            foreach ($userTotals as $userId => $total) {
+                $setting = UserCapacitySetting::where('user_id', $userId)
+                    ->where('effective_from', '<=', $weekStart)
+                    ->orderBy('effective_from', 'desc')
+                    ->first();
+
+                $max = $setting ? (float) $setting->max_hours : 40;
+
+                if ($total > $max && ! $setting?->confirmed_by) {
+                    return false;
+                }
+            }
+        }
+
+        return true;
+    }
+
+    public function submitForReview()
+    {
+        if (! Auth::user()->isSuperAdmin() && ! Auth::user()->hasRole('CSP')) {
+            flash()->error('Hanya CSP yang bisa submit kalender untuk review.');
+            return;
+        }
+
+        if ($this->calendar->status !== 'draft') {
+            flash()->error('Kalender harus berstatus Draft.');
+            return;
+        }
+
+        if (! $this->isCapacityReady()) {
+            flash()->error('Kapasitas produksi belum OK. Selesaikan tindakan Over Capacity di tab Capacity terlebih dahulu.');
+            return;
+        }
+
+        $this->calendar->update(['status' => 'in_review']);
+        flash()->success('Kalender dikirim ke review (menunggu MC/BM).');
+        $this->loadCalendar();
+    }
+
+    public function approveCalendar()
+    {
+        if (! Auth::user()->isSuperAdmin() && ! Auth::user()->hasRole('MC_BM')) {
+            flash()->error('Hanya MC/BM yang bisa menyetujui kalender.');
+            return;
+        }
+
+        if ($this->calendar->status !== 'in_review') {
+            flash()->error('Kalender harus berstatus In Review.');
+            return;
+        }
+
+        $this->calendar->update(['status' => 'approved']);
+        flash()->success('Kalender disetujui.');
+        $this->loadCalendar();
+    }
+
+    public function distributeCalendar()
+    {
+        if (! Auth::user()->isSuperAdmin() && ! Auth::user()->hasRole('CSP')) {
+            flash()->error('Hanya CSP yang bisa mendistribusikan kalender.');
+            return;
+        }
+
+        if ($this->calendar->status !== 'approved') {
+            flash()->error('Kalender harus berstatus Approved.');
+            return;
+        }
+
+        $this->calendar->update(['status' => 'distributed']);
+        flash()->success('Kalender didistribusikan ke tim.');
+        $this->loadCalendar();
+    }
+
+    public function archiveCalendar()
+    {
+        if (! Auth::user()->isSuperAdmin() && ! Auth::user()->hasRole('CSP')) {
+            flash()->error('Hanya CSP yang bisa mengarsipkan kalender.');
+            return;
+        }
+
+        if ($this->calendar->status !== 'distributed') {
+            flash()->error('Kalender harus berstatus Distributed.');
+            return;
+        }
+
+        $this->calendar->update(['status' => 'archived']);
+        flash()->success('Kalender diarsipkan.');
         $this->loadCalendar();
     }
 

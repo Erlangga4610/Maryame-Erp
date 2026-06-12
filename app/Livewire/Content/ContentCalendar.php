@@ -115,6 +115,12 @@ class ContentCalendar extends Component
 
     public $capacityEditContents = [];
 
+    public $capacityResolutionNotes = '';
+
+    public $capacityResolutionStep = 0;
+
+    public $confirmByUserId = null;
+
     public function capacityGoToToday()
     {
         $this->capacityWeekStart = now()->startOfWeek();
@@ -189,11 +195,17 @@ class ContentCalendar extends Component
             $setting = \App\Models\UserCapacitySetting::where('user_id', $id)
                 ->where('effective_from', '<=', $start)
                 ->orderBy('effective_from', 'desc')
+                ->with('confirmer')
                 ->first();
 
             $row['max'] = $setting ? (float) $setting->max_hours : 40;
             $row['total'] = $row['total'] ?? 0;
             $row['contents'] = $row['contents'] ?? [];
+            $row['resolution_step'] = $setting?->resolution_step ?? 0;
+            $row['resolution_notes'] = $setting?->resolution_notes;
+            $row['confirmed_by'] = $setting?->confirmer?->name;
+            $row['confirmed_at'] = $setting?->confirmed_at;
+            $row['setting_id'] = $setting?->id;
         }
 
         return $users;
@@ -242,6 +254,44 @@ class ContentCalendar extends Component
 
         flash()->success('Kapasitas berhasil disimpan.');
         $this->closeCapacityEditModal();
+    }
+
+    public function saveCapacityResolution($userId)
+    {
+        $this->validate([
+            'capacityResolutionStep' => 'required|integer|min:1|max:5',
+            'capacityResolutionNotes' => 'required|string|max:1000',
+        ]);
+
+        \App\Models\UserCapacitySetting::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'effective_from' => $this->capacityWeekStart,
+            ],
+            [
+                'resolution_step' => $this->capacityResolutionStep,
+                'resolution_notes' => $this->capacityResolutionNotes,
+            ],
+        );
+
+        $this->reset('capacityResolutionNotes', 'capacityResolutionStep');
+        flash()->success('Tindakan kapasitas berhasil dicatat.');
+    }
+
+    public function confirmCapacity($userId)
+    {
+        \App\Models\UserCapacitySetting::updateOrCreate(
+            [
+                'user_id' => $userId,
+                'effective_from' => $this->capacityWeekStart,
+            ],
+            [
+                'confirmed_by' => Auth::id(),
+                'confirmed_at' => now(),
+            ],
+        );
+
+        flash()->success('Kapasitas sudah dikonfirmasi.');
     }
 
     public function getQcSuggestedSubtypeProperty(): ?string

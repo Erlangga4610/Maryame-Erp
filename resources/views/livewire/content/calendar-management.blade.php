@@ -7,7 +7,43 @@
                 {{ \Carbon\Carbon::create($currentYear, $currentMonth)->format('F Y') }}
             </h2>
             <flux:button variant="outline" wire:click="nextMonth" icon="chevron-right" />
-            <flux:button variant="ghost" wire:click="goToToday" size="sm">Minggu Ini</flux:button>
+            <flux:button variant="ghost" wire:click="goToToday" size="sm">Hari Ini</flux:button>
+        </div>
+
+        {{-- Calendar status & actions --}}
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2">
+                <flux:badge size="sm" :color="match($calendar->status) {
+                    'draft' => 'zinc',
+                    'in_review' => 'amber',
+                    'approved' => 'green',
+                    'distributed' => 'purple',
+                    'archived' => 'zinc',
+                    default => 'zinc',
+                }">{{ ucfirst(str_replace('_', ' ', $calendar->status)) }}</flux:badge>
+            </div>
+            <div class="flex items-center gap-2">
+                @if($calendar->status === 'draft' && (Auth::user()->isSuperAdmin() || Auth::user()->hasRole('CSP')))
+                    <flux:button wire:click="submitForReview" size="sm" variant="primary">
+                        Submit for Review
+                    </flux:button>
+                @endif
+                @if($calendar->status === 'in_review' && (Auth::user()->isSuperAdmin() || Auth::user()->hasRole('MC_BM')))
+                    <flux:button wire:click="approveCalendar" size="sm" variant="primary" color="green">
+                        Approve
+                    </flux:button>
+                @endif
+                @if($calendar->status === 'approved' && (Auth::user()->isSuperAdmin() || Auth::user()->hasRole('CSP')))
+                    <flux:button wire:click="distributeCalendar" size="sm" variant="primary" color="purple">
+                        Distribute
+                    </flux:button>
+                @endif
+                @if($calendar->status === 'distributed' && (Auth::user()->isSuperAdmin() || Auth::user()->hasRole('CSP')))
+                    <flux:button wire:click="archiveCalendar" size="sm" variant="outline">
+                        Archive
+                    </flux:button>
+                @endif
+            </div>
         </div>
     </div>
 
