@@ -611,8 +611,8 @@ class ContentCalendar extends Component
     {
         $this->validate();
 
-        if ($this->modalMode === 'edit' && $this->editingContentStatus !== 'draft' && $this->adjustmentType !== 'minor' && ! $this->adjustmentReason) {
-            $this->addError('adjustmentReason', 'Alasan adjustment wajib diisi untuk tipe Major atau Reactive.');
+        if ($this->modalMode === 'edit' && $this->editingContentStatus !== 'draft' && ! $this->adjustmentReason) {
+            $this->addError('adjustmentReason', 'Alasan adjustment wajib diisi.');
             return;
         }
 
@@ -781,7 +781,7 @@ class ContentCalendar extends Component
                             'field' => $field,
                             'old_value' => is_bool($old) ? ($old ? '1' : '0') : $old,
                             'new_value' => is_bool($new) ? ($new ? '1' : '0') : $new,
-                            'adjustment_type' => $isAdjustment ? $this->adjustmentType : 'minor',
+                            'adjustment_type' => $isAdjustment ? $this->adjustmentType : 'draft_edit',
                             'adjustment_reason' => $isAdjustment ? $this->adjustmentReason : null,
                         ]);
                         $versionIncreased = true;
@@ -797,6 +797,19 @@ class ContentCalendar extends Component
                         'version' => $content->version,
                         'data' => $content->fresh()->toArray(),
                         'created_by' => $user->id,
+                    ]);
+                }
+
+                if ($isAdjustment && $this->adjustmentType === 'minor') {
+                    Adjustment::create([
+                        'content_id' => $content->id,
+                        'type' => 'minor',
+                        'reason' => $this->adjustmentReason,
+                        'status' => 'approved',
+                        'requested_by' => $user->id,
+                        'reviewed_by' => $user->id,
+                        'reviewed_at' => now(),
+                        'changed_fields' => $data,
                     ]);
                 }
 
