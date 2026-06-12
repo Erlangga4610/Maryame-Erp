@@ -168,6 +168,11 @@ class Content extends Model
         return $this->hasOne(PostPublishChecklist::class);
     }
 
+    public function assets()
+    {
+        return $this->hasMany(Asset::class);
+    }
+
     public function getFullPublishDateAttribute(): ?string
     {
         if (! $this->publish_date) {

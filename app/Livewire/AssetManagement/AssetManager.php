@@ -2,6 +2,7 @@
 
 namespace App\Livewire\AssetManagement;
 
+use App\Content\Models\Asset;
 use App\Content\Models\Content;
 use App\Content\Models\ContentVersion;
 use Illuminate\Support\Facades\Auth;
@@ -45,6 +46,15 @@ class AssetManager extends Component
         $content = Content::findOrFail($this->contentId);
         $content->update(['final_asset_link' => $path]);
 
+        Asset::create([
+            'content_id' => $this->contentId,
+            'type' => 'final',
+            'link_or_path' => $path,
+            'version' => (string) ($content->version ?? 1),
+            'review_status' => 'approved',
+            'uploaded_by' => Auth::id(),
+        ]);
+
         $this->existingFinalAsset = $path;
         flash()->success('Asset final berhasil diupload!');
         $this->dispatch('asset-updated', contentId: $this->contentId);
@@ -62,6 +72,15 @@ class AssetManager extends Component
 
         $content = Content::findOrFail($this->contentId);
         $content->update(['thumbnail_link' => $path]);
+
+        Asset::create([
+            'content_id' => $this->contentId,
+            'type' => 'thumbnail',
+            'link_or_path' => $path,
+            'version' => (string) ($content->version ?? 1),
+            'review_status' => 'approved',
+            'uploaded_by' => Auth::id(),
+        ]);
 
         $this->existingThumbnail = $path;
         flash()->success('Thumbnail berhasil diupload!');
@@ -92,6 +111,15 @@ class AssetManager extends Component
         }
     }
 
+    public function deleteAsset($assetId)
+    {
+        $asset = Asset::findOrFail($assetId);
+        Storage::disk('public')->delete($asset->link_or_path);
+        $asset->delete();
+        flash()->success('Asset berhasil dihapus.');
+        $this->dispatch('asset-updated', contentId: $this->contentId);
+    }
+
     public function render()
     {
         $content = Content::with('platform')->findOrFail($this->contentId);
@@ -99,10 +127,15 @@ class AssetManager extends Component
             ->where('content_id', $this->contentId)
             ->orderBy('version', 'desc')
             ->get();
+        $assets = Asset::with('uploader')
+            ->where('content_id', $this->contentId)
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return view('livewire.asset-management.asset-manager', [
             'content' => $content,
             'versions' => $versions,
+            'assetList' => $assets,
         ])->layout('layouts.admin', ['title' => 'Assets #'.$content->content_code]);
     }
 }

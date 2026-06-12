@@ -55,6 +55,30 @@
     </div>
 
     <x-flux::card class="space-y-4">
+        <flux:heading size="base">Asset Library ({{ $assetList->count() }})</flux:heading>
+        <div class="space-y-2">
+            @forelse ($assetList as $asset)
+                <div class="flex items-center justify-between p-2 bg-zinc-50 dark:bg-zinc-800 rounded text-sm">
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <flux:badge size="sm" color="{{ $asset->type === 'final' ? 'pink' : 'blue' }}">
+                            {{ $asset->type }}
+                        </flux:badge>
+                        <span class="truncate text-zinc-600 dark:text-zinc-400">{{ Str::after($asset->link_or_path, '/') }}</span>
+                        @if ($asset->version)
+                            <span class="text-zinc-400 shrink-0">v{{ $asset->version }}</span>
+                        @endif
+                        <span class="text-zinc-400 shrink-0 text-xs">{{ $asset->created_at->format('d M H:i') }}</span>
+                        <span class="text-zinc-500 shrink-0 text-xs">{{ $asset->uploader?->name ?? '—' }}</span>
+                    </div>
+                    <flux:button wire:click="deleteAsset({{ $asset->id }})" size="xs" variant="ghost" icon="trash" class="shrink-0" />
+                </div>
+            @empty
+                <p class="text-zinc-500 text-sm">Belum ada asset.</p>
+            @endforelse
+        </div>
+    </x-flux::card>
+
+    <x-flux::card class="space-y-4">
         <flux:heading size="base">Version History ({{ $versions->count() }})</flux:heading>
         <div class="space-y-2">
             @forelse ($versions as $version)
