@@ -138,6 +138,11 @@ class Content extends Model
         return $this->hasMany(Approval::class);
     }
 
+    public function brief()
+    {
+        return $this->hasOne(Brief::class);
+    }
+
     public function tiktokQc()
     {
         return $this->hasOne(TiktokQc::class, 'content_id');

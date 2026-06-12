@@ -425,7 +425,7 @@ class ContentCalendar extends Component
 
     public function render()
     {
-        $query = Content::with(['platform', 'product', 'campaign', 'contentGroup', 'picCopy', 'picVisual', 'picVideo', 'approvals', 'tiktokQc']);
+        $query = Content::with(['platform', 'product', 'campaign', 'contentGroup', 'picCopy', 'picVisual', 'picVideo', 'approvals', 'tiktokQc', 'brief']);
 
         if ($this->selectedPlatform) {
             $query->where('platform_id', $this->selectedPlatform);
@@ -563,24 +563,40 @@ class ContentCalendar extends Component
 
     public function openEditModal($id)
     {
-        $content = Content::findOrFail($id);
+        $content = Content::with('brief')->findOrFail($id);
         $this->contentId = $id;
         $this->modalMode = 'edit';
+
+        $brief = $content->brief;
 
         $raw = $content->only([
             'platform_id', 'product_id', 'campaign_id', 'content_group_id', 'theme', 'caption',
             'description', 'pic_copy_id', 'pic_visual_id', 'pic_video_id',
-            'copy_brief', 'visual_brief', 'video_brief',
-            'angle', 'positioning', 'target_audience', 'key_message', 'tone',
-            'aspect_ratio', 'resolution', 'duration', 'format_file', 'hashtag',
-            'audio_guidance', 'originality_instruction', 'thumbnail_note',
             'est_copy_hours', 'est_visual_hours', 'est_video_hours',
         ]);
+
+        $raw['copy_brief'] = $brief?->copy_brief ?? $content->copy_brief;
+        $raw['visual_brief'] = $brief?->visual_brief ?? $content->visual_brief;
+        $raw['video_brief'] = $brief?->video_brief ?? $content->video_brief;
+        $raw['angle'] = $brief?->angle ?? $content->angle;
+        $raw['positioning'] = $brief?->positioning ?? $content->positioning;
+        $raw['target_audience'] = $brief?->target_audience ?? $content->target_audience;
+        $raw['key_message'] = $brief?->key_message ?? $content->key_message;
+        $raw['tone'] = $brief?->tone ?? $content->tone;
+        $raw['aspect_ratio'] = $brief?->aspect_ratio ?? $content->aspect_ratio;
+        $raw['resolution'] = $brief?->resolution ?? $content->resolution;
+        $raw['duration'] = $brief?->duration ?? $content->duration;
+        $raw['format_file'] = $brief?->format_file ?? $content->format_file;
+        $raw['hashtag'] = $brief?->hashtag ?? $content->hashtag;
+        $raw['audio_guidance'] = $brief?->audio_guidance ?? $content->audio_guidance;
+        $raw['originality_instruction'] = $brief?->originality_instruction ?? $content->originality_instruction;
+        $raw['thumbnail_note'] = $brief?->thumbnail_note ?? $content->thumbnail_note;
+
         $raw['priority'] = $content->priority?->value ?? 'medium';
         $raw['publish_date'] = $content->publish_date?->format('Y-m-d') ?? '';
         $raw['deadline_produksi'] = $content->deadline_produksi?->format('Y-m-d') ?? '';
         $this->form = $raw;
-        $this->isBriefFinal = $content->is_brief_final;
+        $this->isBriefFinal = $brief?->is_final ?? $content->is_brief_final;
         $this->editingContentStatus = $content->status->value;
         $this->existingFinalAsset = $content->final_asset_link;
         $this->existingThumbnail = $content->thumbnail_link;
@@ -636,6 +652,8 @@ class ContentCalendar extends Component
 
             $content->version = 1;
             $content->save();
+
+            $this->saveBrief($content->id);
 
             ContentVersion::create([
                 'content_id' => $content->id,
@@ -791,6 +809,23 @@ class ContentCalendar extends Component
         $this->resetValidation();
     }
 
+    private function saveBrief($contentId)
+    {
+        $briefFields = ['angle', 'positioning', 'target_audience', 'key_message', 'tone',
+            'copy_brief', 'aspect_ratio', 'resolution', 'duration', 'format_file',
+            'hashtag', 'audio_guidance', 'originality_instruction', 'thumbnail_note',
+            'visual_brief', 'video_brief'];
+
+        $briefData = collect($this->form)->only($briefFields)
+            ->map(fn ($v) => $v === '' ? null : $v)
+            ->all();
+
+        \App\Content\Models\Brief::updateOrCreate(
+            ['content_id' => $contentId],
+            $briefData,
+        );
+    }
+
     public function closeModal()
     {
         $this->showModal = false;
@@ -865,7 +900,7 @@ class ContentCalendar extends Component
 
     public function openBriefModal($id)
     {
-        $this->briefContent = Content::with(['platform', 'product', 'campaign'])->findOrFail($id);
+        $this->briefContent = Content::with(['platform', 'product', 'campaign', 'brief'])->findOrFail($id);
         $this->showBriefModal = true;
     }
 
@@ -1282,11 +1317,19 @@ class ContentCalendar extends Component
             return;
         }
 
-        $content = Content::findOrFail($id);
+        $content = Content::with('brief')->findOrFail($id);
         $content->is_brief_final = true;
         $content->brief_finalized_at = now();
         $content->brief_finalized_by = Auth::id();
         $content->save();
+
+        if ($content->brief) {
+            $content->brief->update([
+                'is_final' => true,
+                'finalized_at' => now(),
+                'finalized_by' => Auth::id(),
+            ]);
+        }
 
         flash()->success('Brief berhasil difinalisasi! Konten siap produksi.');
     }
