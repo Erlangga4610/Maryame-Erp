@@ -1,14 +1,17 @@
 <?php
 
-use App\Auth\Livewire\Login;
-use App\Content\Livewire\ApprovalInbox;
-use App\Content\Livewire\ContentCalendar;
-use App\Dashboard\Livewire\Dashboard;
-use App\MasterData\Livewire\Campaigns;
-use App\MasterData\Livewire\Platforms;
-use App\MasterData\Livewire\Products;
-use App\MasterData\Livewire\Users;
-use App\Production\Livewire\ProductionSchedule;
+use App\Livewire\Auth\Login;
+use App\Livewire\Content\ApprovalInbox;
+use App\Livewire\Content\CalendarManagement;
+use App\Livewire\Content\ContentCalendar;
+use App\Livewire\Content\MixTracker;
+use App\Livewire\Content\MyTasks;
+use App\Livewire\Dashboard\Dashboard;
+use App\Livewire\MasterData\Campaigns;
+use App\Livewire\MasterData\Platforms;
+use App\Livewire\MasterData\Products;
+use App\Livewire\MasterData\Users;
+use App\Livewire\Production\ProductionSchedule;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
@@ -30,7 +33,13 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/contents', ContentCalendar::class)->name('contents.index');
 
+    Route::get('/my-tasks', MyTasks::class)->name('my-tasks');
+
+    Route::get('/calendar', CalendarManagement::class)->name('calendar');
+
     Route::get('/approval-inbox', ApprovalInbox::class)->name('approval.inbox');
+
+    Route::get('/mix-tracker', MixTracker::class)->name('mix-tracker');
 
     Route::get('/production-schedule', ProductionSchedule::class)->name('production.schedule');
 

@@ -2,26 +2,31 @@
 
 namespace App\Content\Models;
 
+use App\Content\Enums\CalendarEntryStatus;
 use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 
-class ContentVersion extends Model
+class CalendarEntry extends Model
 {
     protected $fillable = [
+        'calendar_id',
         'content_id',
-        'version',
-        'data',
+        'scheduled_date',
+        'status',
+        'sort_order',
+        'notes',
         'created_by',
-        'is_archived',
-        'archived_by',
-        'archived_at',
     ];
 
     protected $casts = [
-        'data' => 'array',
-        'is_archived' => 'boolean',
-        'archived_at' => 'datetime',
+        'scheduled_date' => 'date',
+        'status' => CalendarEntryStatus::class,
     ];
+
+    public function calendar()
+    {
+        return $this->belongsTo(Calendar::class);
+    }
 
     public function content()
     {
@@ -31,10 +36,5 @@ class ContentVersion extends Model
     public function creator()
     {
         return $this->belongsTo(User::class, 'created_by');
-    }
-
-    public function archiver()
-    {
-        return $this->belongsTo(User::class, 'archived_by');
     }
 }

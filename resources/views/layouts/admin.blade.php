@@ -30,6 +30,9 @@
         <flux:navbar class="-mb-px max-lg:hidden">
             <flux:navbar.item icon="home" href="/dashboard" :current="request()->routeIs('dashboard')">Dashboard</flux:navbar.item>
             <flux:navbar.item icon="calendar" href="/contents" :current="request()->routeIs('contents.*')">Content Calendar</flux:navbar.item>
+            <flux:navbar.item icon="clipboard-document-list" href="/my-tasks" :current="request()->routeIs('my-tasks')">My Tasks</flux:navbar.item>
+            <flux:navbar.item icon="calendar-days" href="/calendar" :current="request()->routeIs('calendar')">Calendar</flux:navbar.item>
+            <flux:navbar.item icon="chart-bar-square" href="/mix-tracker" :current="request()->routeIs('mix-tracker')">Mix Tracker</flux:navbar.item>
             <flux:navbar.item icon="inbox" href="/approval-inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:navbar.item>
             <flux:navbar.item icon="clock" href="/production-schedule" :current="request()->routeIs('production.*')">Production Schedule</flux:navbar.item>
 
@@ -89,6 +92,9 @@
         <flux:sidebar.nav>
             <flux:sidebar.item icon="home" href="/dashboard" :current="request()->routeIs('dashboard')">Dashboard</flux:sidebar.item>
             <flux:sidebar.item icon="calendar" href="/contents" :current="request()->routeIs('contents.*')">Content Calendar</flux:sidebar.item>
+            <flux:sidebar.item icon="clipboard-document-list" href="/my-tasks" :current="request()->routeIs('my-tasks')">My Tasks</flux:sidebar.item>
+            <flux:sidebar.item icon="calendar-days" href="/calendar" :current="request()->routeIs('calendar')">Calendar</flux:sidebar.item>
+            <flux:sidebar.item icon="chart-bar-square" href="/mix-tracker" :current="request()->routeIs('mix-tracker')">Mix Tracker</flux:sidebar.item>
             <flux:sidebar.item icon="inbox" href="/approval-inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:sidebar.item>
             <flux:sidebar.item icon="clock" href="/production-schedule" :current="request()->routeIs('production.*')">Production Schedule</flux:sidebar.item>
 
@@ -116,6 +122,9 @@
                 <flux:navlist>
                     <flux:navlist.item href="/dashboard" icon="home" :current="request()->routeIs('dashboard')">Dashboard</flux:navlist.item>
                     <flux:navlist.item href="/contents" icon="calendar" :current="request()->routeIs('contents.*')">Content Calendar</flux:navlist.item>
+                    <flux:navlist.item href="/my-tasks" icon="clipboard-document-list" :current="request()->routeIs('my-tasks')">My Tasks</flux:navlist.item>
+                    <flux:navlist.item href="/calendar" icon="calendar-days" :current="request()->routeIs('calendar')">Calendar</flux:navlist.item>
+                    <flux:navlist.item href="/mix-tracker" icon="chart-bar-square" :current="request()->routeIs('mix-tracker')">Mix Tracker</flux:navlist.item>
                     <flux:navlist.item href="/approval-inbox" icon="inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:navlist.item>
                     <flux:navlist.item href="/production-schedule" icon="clock" :current="request()->routeIs('production.*')">Production Schedule</flux:navlist.item>
 

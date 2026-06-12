@@ -25,6 +25,7 @@ class Content extends Model
         'platform_id',
         'product_id',
         'campaign_id',
+        'content_group_id',
         'theme',
         'caption',
         'description',
@@ -34,6 +35,7 @@ class Content extends Model
         'tiktok_subtype',
         'final_asset_link',
         'thumbnail_link',
+        'live_url',
         'has_claim',
         'is_sensitive',
         'publish_date',
@@ -61,6 +63,9 @@ class Content extends Model
         'audio_guidance',
         'originality_instruction',
         'thumbnail_note',
+        'est_copy_hours',
+        'est_visual_hours',
+        'est_video_hours',
         'is_brief_final',
         'brief_finalized_at',
         'brief_finalized_by',
@@ -108,6 +113,11 @@ class Content extends Model
         return $this->belongsTo(Campaign::class);
     }
 
+    public function contentGroup()
+    {
+        return $this->belongsTo(ContentGroup::class, 'content_group_id');
+    }
+
     public function picCopy()
     {
         return $this->belongsTo(User::class, 'pic_copy_id');
@@ -146,6 +156,16 @@ class Content extends Model
     public function adjustmentLogs()
     {
         return $this->hasMany(AdjustmentLog::class);
+    }
+
+    public function adjustments()
+    {
+        return $this->hasMany(Adjustment::class);
+    }
+
+    public function postPublishChecklist()
+    {
+        return $this->hasOne(PostPublishChecklist::class);
     }
 
     public function getFullPublishDateAttribute(): ?string

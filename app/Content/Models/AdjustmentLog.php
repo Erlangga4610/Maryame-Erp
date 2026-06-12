@@ -13,6 +13,8 @@ class AdjustmentLog extends Model
         'field',
         'old_value',
         'new_value',
+        'adjustment_type',
+        'adjustment_reason',
     ];
 
     public function content()
