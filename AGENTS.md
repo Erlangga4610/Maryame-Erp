@@ -174,3 +174,24 @@ Component at `app/Livewire/Content/ContentCalendar.php` uses 4 traits:
 - `WithCapacityPlanning` — 5-step capacity resolution, `confirmed_by`
 
 Adjustment validation: reason only required when `$this->adjustmentType !== 'minor'`.
+
+## Taste Skills (UI Quality)
+
+Terinstal di `.agents/skills/` — koleksi *portable agent skills* untuk meningkatkan kualitas output UI/UX. Dari repo [taste-skill](https://github.com/Leonxlnx/taste-skill) (MIT).
+
+| Skill | Install name | Fungsi |
+|---|---|---|
+| `taste-skill` | `design-taste-frontend` | Default — layout kuat, tipografi tajam, anti boilerplate. 3 dial: VARIANCE/MOTION/DENSITY |
+| `gpt-tasteskill` | `gpt-taste` | Varian stricter untuk GPT/Codex |
+| `image-to-code-skill` | `image-to-code` | Pipeline image → analisis → implementasi frontend |
+| `redesign-skill` | `redesign-existing-projects` | Audit UI existing, lalu perbaiki layout/spacing/hierarchy |
+| `soft-skill` | `high-end-visual-design` | UI premium kalem, kontras lembut, whitespace luas |
+| `minimalist-skill` | `minimalist-ui` | Editorial UI (Notion/Linear vibes) |
+| `brutalist-skill` | `industrial-brutalist-ui` | Swiss type, sharp contrast, experimental layout |
+| `imagegen-frontend-web` | — | Generate gambar referensi website (hero, landing) |
+| `imagegen-frontend-mobile` | — | Generate gambar referensi mobile flow |
+| `brandkit` | — | Generate moodboard brand kit |
+| `output-skill` | `full-output-enforcement` | Paksa agent output penuh, no placeholder |
+| `stitch-skill` | `stitch-design-taste` | Google Stitch-compatible rules |
+
+Cara pakai: mention skill name di prompt, misal "follow taste-skill: buat landing page dengan VARIANCE 7, MOTION 6, DENSITY 4".

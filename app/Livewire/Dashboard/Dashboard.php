@@ -3,6 +3,7 @@
 namespace App\Livewire\Dashboard;
 
 use App\Content\Enums\ContentStatus;
+use App\Content\Models\Asset;
 use App\Content\Models\Content;
 use App\Content\Models\ContentVersion;
 use App\Models\Campaign;
@@ -10,6 +11,7 @@ use App\Models\Platform;
 use App\Models\Product;
 use App\Models\User;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Session;
 use Livewire\Component;
 
 class Dashboard extends Component
@@ -25,6 +27,17 @@ class Dashboard extends Component
     public function selectContent($id)
     {
         $this->selectedContentId = $id;
+    }
+
+    public function toggleTask($contentId)
+    {
+        $completed = Session::get('dashboard_completed_tasks', []);
+        if (in_array($contentId, $completed)) {
+            $completed = array_values(array_filter($completed, fn ($id) => $id != $contentId));
+        } else {
+            $completed[] = $contentId;
+        }
+        Session::put('dashboard_completed_tasks', $completed);
     }
 
     public function render()
@@ -57,6 +70,8 @@ class Dashboard extends Component
 
         $user = Auth::user();
 
+        $completedTasks = Session::get('dashboard_completed_tasks', []);
+
         $myTasks = Content::with(['platform'])
             ->whereIn('status', ['draft', 'in_production', 'ready_review'])
             ->where(function ($q) use ($user) {
@@ -82,36 +97,50 @@ class Dashboard extends Component
         ]);
 
         $selectedContent = null;
+        $assets = collect();
         if ($this->selectedContentId) {
             $selectedContent = Content::with([
                 'platform', 'product', 'campaign', 'picCopy', 'picVisual', 'picVideo',
-                'approvals.approver', 'brief',
+                'approvals.approver', 'brief', 'assets.uploader',
             ])->find($this->selectedContentId);
+
+            if ($selectedContent) {
+                $assets = $selectedContent->assets;
+            }
         }
 
-        $roleCapacity = collect([
-            'GVD' => User::role('GVD')->first(),
-            'VG' => User::role('VG')->first(),
-            'CW' => User::role('CW')->first(),
-            'SMS' => User::role('SMS')->first(),
-        ])->mapWithKeys(function ($user, $role) {
-            if (! $user) return [$role => ['total' => 0, 'active' => 0, 'percentage' => 0]];
-            $total = Content::where(function ($q) use ($user) {
-                $q->where('pic_copy_id', $user->id)
-                  ->orWhere('pic_visual_id', $user->id)
-                  ->orWhere('pic_video_id', $user->id);
-            })->count();
-            $active = Content::whereIn('status', ['draft', 'in_production', 'ready_review'])
-                ->where(function ($q) use ($user) {
-                    $q->where('pic_copy_id', $user->id)
-                      ->orWhere('pic_visual_id', $user->id)
-                      ->orWhere('pic_video_id', $user->id);
-                })->count();
-            $max = max($total, 5);
+        // role → PIC field mapping
+        $roleFieldMap = [
+            'CW' => 'pic_copy_id',
+            'GVD' => 'pic_visual_id',
+            'VG' => 'pic_video_id',
+            'SMS' => 'pic_copy_id', // SMS uses pic_copy workload
+        ];
+
+        // est hours per role field
+        $roleHoursMap = [
+            'CW' => 'est_copy_hours',
+            'GVD' => 'est_visual_hours',
+            'VG' => 'est_video_hours',
+            'SMS' => 'est_copy_hours',
+        ];
+
+        $weekHours = 40;
+
+        $roleCapacity = collect($roleFieldMap)->mapWithKeys(function ($field, $role) use ($roleHoursMap, $weekHours) {
+            $user = User::role($role)->first();
+            if (! $user) return [$role => ['total' => 0, 'used' => 0, 'percentage' => 0]];
+
+            $hoursCol = $roleHoursMap[$role];
+
+            $used = Content::where($field, $user->id)
+                ->whereIn('status', ['draft', 'in_production', 'ready_review', 'approved'])
+                ->sum($hoursCol);
+
             return [$role => [
-                'total' => $total,
-                'active' => $active,
-                'percentage' => min(round(($active / $max) * 100), 100),
+                'total' => $weekHours,
+                'used' => round($used, 1),
+                'percentage' => $weekHours > 0 ? min(round(($used / $weekHours) * 100), 100) : 0,
             ]];
         });
 
@@ -124,12 +153,6 @@ class Dashboard extends Component
 
         $platforms = Platform::all();
 
-        $allContent = Content::with(['platform'])
-            ->whereIn('status', ['approved', 'scheduled', 'published', 'in_production', 'ready_review'])
-            ->latest()
-            ->limit(10)
-            ->get();
-
         return view('livewire.dashboard.dashboard', [
             'total' => $total,
             'stats' => $stats,
@@ -140,12 +163,14 @@ class Dashboard extends Component
             'lateCount' => $lateCount,
             'kanbanData' => $kanbanData,
             'selectedContent' => $selectedContent,
+            'selectedContentId' => $this->selectedContentId,
+            'assets' => $assets,
             'roleCapacity' => $roleCapacity,
             'assetProducts' => $assetProducts,
             'recentVersions' => $recentVersions,
             'platforms' => $platforms,
-            'allContent' => $allContent,
             'user' => $user,
+            'completedTasks' => $completedTasks,
         ])->layout('layouts.admin', ['title' => 'Dashboard']);
     }
 }

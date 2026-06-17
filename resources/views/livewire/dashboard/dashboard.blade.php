@@ -1,7 +1,7 @@
 <div class="space-y-6">
     {{-- 1. Stat Cards --}}
     <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-7 gap-3">
-        <flux:card class="p-4">
+        <flux:card class="dashboard-stat-card p-4">
             <div class="flex items-center gap-2 mb-1">
                 <div class="size-7 rounded-full bg-pink-100 dark:bg-pink-900/30 flex items-center justify-center">
                     <flux:icon name="document-text" class="size-3.5 text-pink-500" />
@@ -25,7 +25,7 @@
                     default => 'text-zinc-600'
                 };
             @endphp
-            <flux:card class="p-4">
+            <flux:card class="dashboard-stat-card p-4">
                 <p class="text-xs font-medium text-zinc-500 dark:text-zinc-400">{{ $item['status']->label() }}</p>
                 <p class="text-2xl font-bold mt-1 {{ $colorClass }}">{{ $item['count'] }}</p>
                 <p class="text-[10px] text-zinc-400 dark:text-zinc-500 mt-0.5">{{ $item['percentage'] }}%</p>
@@ -85,14 +85,15 @@
                             @foreach($dayContent as $content)
                                 @php
                                     $code = $content->platform?->code ?? '';
+                                    $isSelected = $content->id === $selectedContentId;
                                     $blockClass = match($code) {
-                                        'TKM' => 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300',
-                                        'IG' => 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
-                                        'SHOP' => 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
-                                        default => 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
+                                        'TKM' => $isSelected ? 'bg-pink-200 dark:bg-pink-800/50 text-pink-800 dark:text-pink-200 ring-2 ring-pink-500' : 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300',
+                                        'IG' => $isSelected ? 'bg-purple-200 dark:bg-purple-800/50 text-purple-800 dark:text-purple-200 ring-2 ring-purple-500' : 'bg-purple-100 dark:bg-purple-900/30 text-purple-700 dark:text-purple-300',
+                                        'SHOP' => $isSelected ? 'bg-emerald-200 dark:bg-emerald-800/50 text-emerald-800 dark:text-emerald-200 ring-2 ring-emerald-500' : 'bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300',
+                                        default => $isSelected ? 'bg-zinc-200 dark:bg-zinc-700 text-zinc-800 dark:text-zinc-200 ring-2 ring-pink-500' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400'
                                     };
                                 @endphp
-                                <div class="text-[8px] leading-tight px-1 py-0.5 rounded cursor-pointer {{ $blockClass }}"
+                                <div class="text-[8px] leading-tight px-1 py-0.5 rounded cursor-pointer transition-all {{ $blockClass }}"
                                      x-on:click="$wire.selectContent({{ $content->id }})">
                                     {{ $content->platform?->code ?? '—' }} {{ $content->content_type?->label() ?? '' }}
                                 </div>
@@ -111,10 +112,18 @@
             </h3>
             <div class="space-y-2">
                 @forelse($myTasks as $task)
-                    <div class="flex items-start gap-2.5">
-                        <div class="mt-0.5 size-4 rounded border-2 {{ $task->status === 'ready_review' ? 'border-amber-400 bg-amber-50 dark:bg-amber-900/20' : 'border-zinc-300 dark:border-zinc-600' }} shrink-0"></div>
+                    @php $isCompleted = in_array($task->id, $completedTasks); @endphp
+                    <div class="flex items-start gap-2.5" x-data>
+                        <div wire:click="toggleTask({{ $task->id }})"
+                             class="mt-0.5 size-4 rounded border-2 shrink-0 cursor-pointer transition-all duration-150 flex items-center justify-center
+                             {{ $isCompleted ? 'bg-pink-500 border-pink-500' : ($task->status === 'ready_review' ? 'border-amber-400' : 'border-zinc-300 dark:border-zinc-600') }}
+                             hover:border-pink-400">
+                            @if($isCompleted)
+                                <flux:icon name="check" class="size-3 text-white" />
+                            @endif
+                        </div>
                         <div class="min-w-0 flex-1">
-                            <p class="text-xs text-zinc-700 dark:text-zinc-300 leading-snug">{{ $task->theme }}</p>
+                            <p class="text-xs {{ $isCompleted ? 'text-zinc-400 dark:text-zinc-500 line-through' : 'text-zinc-700 dark:text-zinc-300' }} leading-snug">{{ $task->theme }}</p>
                             <div class="flex items-center gap-1.5 mt-0.5">
                                 <flux:badge size="sm" :color="$task->status->color()">{{ $task->status->label() }}</flux:badge>
                                 <span class="text-[10px] text-zinc-400">{{ $task->platform?->code ?? '—' }}</span>
@@ -189,10 +198,12 @@
 
             <div class="mt-4 space-y-2 max-h-[200px] overflow-y-auto">
                 @foreach(collect($kanbanData)->flatten(1)->take(5) as $card)
-                    <div class="flex items-center gap-2.5 p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 cursor-pointer hover:border-pink-200 dark:hover:border-pink-800 transition-colors"
+                    @php $isSelectedCard = $card->id === $selectedContentId; @endphp
+                    <div class="flex items-center gap-2.5 p-2 rounded-lg cursor-pointer transition-all
+                         {{ $isSelectedCard ? 'bg-pink-50 dark:bg-pink-900/20 border-pink-300 dark:border-pink-700 ring-2 ring-pink-500' : 'bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-100 dark:border-zinc-700/50 hover:border-pink-200 dark:hover:border-pink-800' }}"
                          x-on:click="$wire.selectContent({{ $card->id }})">
                         <div class="min-w-0 flex-1">
-                            <p class="text-xs font-medium text-zinc-700 dark:text-zinc-300 truncate">{{ $card->theme }}</p>
+                            <p class="text-xs font-medium {{ $isSelectedCard ? 'text-pink-700 dark:text-pink-300' : 'text-zinc-700 dark:text-zinc-300' }} truncate">{{ $card->theme }}</p>
                             <p class="text-[10px] text-zinc-400">{{ $card->content_code }}</p>
                         </div>
                         <div class="text-right shrink-0">
@@ -280,7 +291,32 @@
                     @endforeach
                 </div>
 
-                {{-- Approval Progress --}}
+                {{-- File Attachments --}}
+                @if($assets->isNotEmpty())
+                    <div class="mb-4 pt-3 border-t border-zinc-100 dark:border-zinc-700">
+                        <p class="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2">Lampiran File</p>
+                        <div class="space-y-1.5">
+                            @foreach($assets as $asset)
+                                <div class="flex items-center gap-2 py-1">
+                                    <div class="size-7 rounded bg-zinc-100 dark:bg-zinc-700 flex items-center justify-center shrink-0">
+                                        <flux:icon name="{{ match($asset->type) { 'image' => 'photo', 'video' => 'video-camera', 'document' => 'document-text', default => 'paper-clip' } }}" class="size-3.5 text-zinc-500" />
+                                    </div>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-xs text-zinc-700 dark:text-zinc-300 truncate">{{ basename($asset->link_or_path ?? '') ?: $asset->type }}</p>
+                                        <p class="text-[9px] text-zinc-400">
+                                            {{ $asset->uploader?->name ?? '—' }} · v{{ $asset->version ?? 1 }}
+                                        </p>
+                                    </div>
+                                    @if($asset->link_or_path)
+                                        <a href="{{ $asset->link_or_path }}" target="_blank" class="text-[10px] text-pink-600 hover:underline shrink-0">Lihat</a>
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
+                {{-- Approval Progress (real data from approvals table) --}}
                 <div class="pt-3 border-t border-zinc-100 dark:border-zinc-700">
                     <p class="text-xs font-medium text-zinc-600 dark:text-zinc-400 mb-2">Approval Progress</p>
                     @php
@@ -289,28 +325,40 @@
                         if ($selectedContent->has_claim) $stages[] = 'rnd';
                         if ($selectedContent->is_sensitive) $stages[] = 'legal';
                     @endphp
-                    <div class="flex items-center gap-1">
-                        @foreach($stages as $i => $stage)
+                    <div class="space-y-1.5">
+                        @forelse($stages as $stage)
                             @php
                                 $approval = $approvals->firstWhere('stage', $stage);
-                                $isApproved = $approval && $approval->status === 'approved';
-                                $circleClass = $isApproved ? 'bg-green-500' : 'bg-zinc-200 dark:bg-zinc-700';
-                                $lineClass = $isApproved ? 'bg-green-500' : 'bg-zinc-200 dark:bg-zinc-700';
+                                $status = $approval?->status ?? 'pending';
+                                $approverName = $approval?->approver?->name ?? '—';
+                                $isDone = $status === 'approved';
                             @endphp
-                            <div class="flex items-center {{ $i < count($stages) - 1 ? 'flex-1' : '' }}">
-                                <div class="size-6 rounded-full flex items-center justify-center {{ $circleClass }}">
-                                    @if($isApproved)
+                            <div class="flex items-center gap-2">
+                                <div class="size-5 rounded-full flex items-center justify-center shrink-0
+                                    {{ $isDone ? 'bg-green-500' : ($status === 'revision' ? 'bg-red-400' : 'bg-zinc-200 dark:bg-zinc-700') }}">
+                                    @if($isDone)
                                         <flux:icon name="check" class="size-3 text-white" />
+                                    @elseif($status === 'revision')
+                                        <flux:icon name="arrow-uturn-left" class="size-3 text-white" />
                                     @else
-                                        <span class="text-[9px] font-medium text-zinc-400 dark:text-zinc-500">{{ $i + 1 }}</span>
+                                        <span class="text-[8px] font-medium text-zinc-400 dark:text-zinc-500">{{ $loop->iteration }}</span>
                                     @endif
                                 </div>
-                                <p class="text-[8px] text-zinc-400 dark:text-zinc-500 ml-1">{{ $stage }}</p>
-                                @if($i < count($stages) - 1)
-                                    <div class="flex-1 h-px mx-1 {{ $lineClass }}"></div>
-                                @endif
+                                <div class="flex-1 min-w-0">
+                                    <div class="flex justify-between">
+                                        <span class="text-xs font-medium text-zinc-700 dark:text-zinc-300">{{ strtoupper($stage) }}</span>
+                                        <span class="text-[9px] {{ $isDone ? 'text-green-600' : ($status === 'revision' ? 'text-red-500' : 'text-zinc-400') }}">
+                                            {{ $status === 'approved' ? 'Approved' : ($status === 'revision' ? 'Revision' : 'Pending') }}
+                                        </span>
+                                    </div>
+                                    @if($approval)
+                                        <p class="text-[9px] text-zinc-400 dark:text-zinc-500 truncate">{{ $approverName }}</p>
+                                    @endif
+                                </div>
                             </div>
-                        @endforeach
+                        @empty
+                            <p class="text-[10px] text-zinc-400 italic">Belum ada approval</p>
+                        @endforelse
                     </div>
                 </div>
             @else
@@ -327,7 +375,7 @@
             <div class="mb-5">
                 <h3 class="text-sm font-semibold text-zinc-800 dark:text-white mb-4 flex items-center gap-2">
                     <flux:icon name="chart-bar" class="size-4 text-pink-500" />
-                    Team Capacity
+                    Team Capacity ({{ $roleCapacity->first()['total'] ?? 40 }}h/minggu)
                 </h3>
                 <div class="space-y-3">
                     @foreach($roleCapacity as $role => $data)
@@ -340,13 +388,17 @@
                             ];
                             $c = $colors[$role] ?? ['bg' => 'bg-zinc-500', 'text' => 'text-zinc-600'];
                             $pct = $data['percentage'];
+                            $used = $data['used'];
+                            $total = $data['total'];
                             $isOver = $pct >= 100;
                             $barClass = $isOver ? 'bg-red-500' : $c['bg'];
                         @endphp
                         <div>
                             <div class="flex justify-between text-xs mb-1">
                                 <span class="font-medium text-zinc-700 dark:text-zinc-300">{{ $role }}</span>
-                                <span class="{{ $isOver ? 'text-red-500 font-bold' : $c['text'] }}">{{ $pct }}%</span>
+                                <span class="{{ $isOver ? 'text-red-500 font-bold' : $c['text'] }}">
+                                    {{ $used }}j / {{ $total }}j
+                                </span>
                             </div>
                             <div class="h-2 bg-zinc-100 dark:bg-zinc-700 rounded-full overflow-hidden">
                                 <div class="h-full rounded-full transition-all {{ $barClass }}" style="width: {{ min($pct, 100) }}%"></div>
