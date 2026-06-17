@@ -55,9 +55,9 @@
         @if($showUnscheduledFilters)
             <div class="mt-2 p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200 dark:border-zinc-700 space-y-2">
                 <flux:select label="Priority" wire:model.live="selectedPriority" placeholder="Semua">
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                    <option value="rutin">Rutin</option>
+                    <option value="campaign">Campaign</option>
+                    <option value="spontan">Spontan</option>
                 </flux:select>
                 <flux:select label="Platform" wire:model.live="selectedPlatform" placeholder="Semua">
                     @foreach($platforms as $platform)

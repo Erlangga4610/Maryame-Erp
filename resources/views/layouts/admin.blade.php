@@ -77,6 +77,7 @@
             <flux:sidebar.item icon="chart-bar-square" href="/mix-tracker" :current="request()->routeIs('mix-tracker')">Mix Tracker</flux:sidebar.item>
             <flux:sidebar.item icon="inbox" href="/approval-inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:sidebar.item>
             <flux:sidebar.item icon="clock" href="/production-schedule" :current="request()->routeIs('production.*')">Production Schedule</flux:sidebar.item>
+            <flux:sidebar.item icon="chart-bar" href="/capacity" :current="request()->routeIs('capacity')">Capacity</flux:sidebar.item>
 
             <flux:sidebar.group expandable heading="Master Data">
                 <flux:sidebar.item href="/master-data/platforms">Platforms</flux:sidebar.item>
@@ -107,6 +108,7 @@
                     <flux:navlist.item href="/mix-tracker" icon="chart-bar-square" :current="request()->routeIs('mix-tracker')">Mix Tracker</flux:navlist.item>
                     <flux:navlist.item href="/approval-inbox" icon="inbox" :current="request()->routeIs('approval.*')">Approval Inbox</flux:navlist.item>
                     <flux:navlist.item href="/production-schedule" icon="clock" :current="request()->routeIs('production.*')">Production Schedule</flux:navlist.item>
+                    <flux:navlist.item href="/capacity" icon="chart-bar" :current="request()->routeIs('capacity')">Capacity</flux:navlist.item>
 
                     <flux:separator />
 

@@ -1,6 +1,9 @@
 <?php
 
 use App\Livewire\Auth\Login;
+use App\Livewire\ApprovalPipeline\ApprovalWorkflow;
+use App\Livewire\ApprovalPipeline\TikTokQcManager;
+use App\Livewire\AssetManagement\AssetManager as AssetManagerComponent;
 use App\Livewire\Content\ApprovalInbox;
 use App\Livewire\Content\CalendarManagement;
 use App\Livewire\Content\ContentCalendar;
@@ -11,7 +14,10 @@ use App\Livewire\MasterData\Campaigns;
 use App\Livewire\MasterData\Platforms;
 use App\Livewire\MasterData\Products;
 use App\Livewire\MasterData\Users;
+use App\Livewire\Content\Capacity as CapacityPlanning;
 use App\Livewire\Production\ProductionSchedule;
+use App\Livewire\PublishingReporting\AdjustmentManager;
+use App\Livewire\PublishingReporting\PublishingManager;
 use App\Livewire\RoleGuide;
 use Illuminate\Support\Facades\Route;
 
@@ -43,6 +49,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/mix-tracker', MixTracker::class)->name('mix-tracker');
 
     Route::get('/production-schedule', ProductionSchedule::class)->name('production.schedule');
+
+    Route::get('/capacity', CapacityPlanning::class)->name('capacity');
+
+    Route::get('/qc/{contentId}', TikTokQcManager::class)->name('qc.manager');
+    Route::get('/approval/{contentId}/{stage}', ApprovalWorkflow::class)->name('approval.workflow');
+    Route::get('/publish/{contentId}', PublishingManager::class)->name('publishing.manager');
+    Route::get('/adjustment/{adjustmentId}', AdjustmentManager::class)->name('adjustment.manager');
+    Route::get('/assets/{contentId}', AssetManagerComponent::class)->name('assets.manager');
 
     Route::get('/role-guide', RoleGuide::class)->name('role-guide');
 

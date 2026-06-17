@@ -58,7 +58,9 @@
         </div>
 
         <div class="flex justify-end gap-2">
-            <flux:button wire:click="$dispatch('close-modal', {modal: 'qc'})" variant="ghost">Batal</flux:button>
+            <flux:button wire:click="downgradeToNonKk" variant="outline" class="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20">
+                Turunkan ke Non-KK
+            </flux:button>
             <flux:button wire:click="save" variant="primary">Simpan QC</flux:button>
         </div>
     </x-flux::card>

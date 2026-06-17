@@ -4,34 +4,34 @@ namespace App\Content\Enums;
 
 enum ContentPriority: string
 {
-    case HIGH = 'high';
-    case MEDIUM = 'medium';
-    case LOW = 'low';
+    case RUTIN = 'rutin';
+    case CAMPAIGN = 'campaign';
+    case SPONTAN = 'spontan';
 
     public function label(): string
     {
         return match ($this) {
-            self::HIGH => 'High Priority',
-            self::MEDIUM => 'Medium Priority',
-            self::LOW => 'Low Priority',
+            self::RUTIN => 'Rutin',
+            self::CAMPAIGN => 'Campaign',
+            self::SPONTAN => 'Spontan',
         };
     }
 
     public function color(): string
     {
         return match ($this) {
-            self::HIGH => 'danger',
-            self::MEDIUM => 'warning',
-            self::LOW => 'success',
+            self::RUTIN => 'success',
+            self::CAMPAIGN => 'danger',
+            self::SPONTAN => 'warning',
         };
     }
 
     public function value(): int
     {
         return match ($this) {
-            self::HIGH => 3,
-            self::MEDIUM => 2,
-            self::LOW => 1,
+            self::RUTIN => 1,
+            self::CAMPAIGN => 3,
+            self::SPONTAN => 2,
         };
     }
 

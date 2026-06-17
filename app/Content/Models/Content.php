@@ -39,6 +39,7 @@ class Content extends Model
         'has_claim',
         'is_sensitive',
         'publish_date',
+        'published_at',
         'publish_time',
         'deadline_produksi',
         'deadline_approval',
@@ -87,6 +88,7 @@ class Content extends Model
         'blocked_at' => 'datetime',
         'briefed_at' => 'datetime',
         'publish_date' => 'date',
+        'published_at' => 'datetime',
         'publish_time' => 'datetime:H:i',
         'deadline_produksi' => 'date',
         'deadline_approval' => 'date',
@@ -168,6 +170,11 @@ class Content extends Model
         return $this->hasMany(Adjustment::class);
     }
 
+    public function assets()
+    {
+        return $this->hasMany(Asset::class);
+    }
+
     public function postPublishChecklist()
     {
         return $this->hasOne(PostPublishChecklist::class);
@@ -186,9 +193,9 @@ class Content extends Model
     public function getPriorityBadgeColorAttribute(): string
     {
         return match ($this->priority) {
-            ContentPriority::HIGH => 'red',
-            ContentPriority::MEDIUM => 'yellow',
-            ContentPriority::LOW => 'green',
+            ContentPriority::CAMPAIGN => 'red',
+            ContentPriority::SPONTAN => 'yellow',
+            ContentPriority::RUTIN => 'green',
             default => 'gray',
         };
     }

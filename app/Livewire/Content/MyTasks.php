@@ -24,7 +24,8 @@ class MyTasks extends Component
             return;
         }
 
-        $content->update(['status' => 'in_production']);
+        $content->status = \App\Content\Enums\ContentStatus::IN_PRODUCTION;
+        $content->save();
         flash()->success('Konten masuk ke tahap produksi!');
     }
 
@@ -42,7 +43,8 @@ class MyTasks extends Component
             return;
         }
 
-        $content->update(['status' => 'ready_review']);
+        $content->status = \App\Content\Enums\ContentStatus::READY_REVIEW;
+        $content->save();
         flash()->success('Konten siap direview!');
     }
 

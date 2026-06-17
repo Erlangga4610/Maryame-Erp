@@ -65,6 +65,9 @@
                     <flux:icon.plus class="size-3.5 mr-1" />
                     New
                 </flux:button>
+                <flux:button size="sm" variant="outline" color="orange" wire:click="openFastTrackModal" icon="bolt">
+                    Fast-Track
+                </flux:button>
             @endif
         </div>
     </div>
@@ -103,9 +106,9 @@
                     wire:model.live="selectedPriority"
                     placeholder="Semua Priority"
                 >
-                    <option value="high">High</option>
-                    <option value="medium">Medium</option>
-                    <option value="low">Low</option>
+                <option value="rutin">Rutin</option>
+                <option value="campaign">Campaign</option>
+                <option value="spontan">Spontan</option>
                 </flux:select>
             </div>
 

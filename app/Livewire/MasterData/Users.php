@@ -98,7 +98,7 @@ class Users extends Component
 
         $rules = [
             'name' => 'required|string|max:200',
-            'email' => 'required|email|unique:users,email,'.$this->editId,
+            'email' => $this->modalMode === 'create' ? 'required|email|unique:users,email' : 'required|email|unique:users,email,'.$this->editId,
             'employee_id' => 'nullable|string|max:20',
             'position' => 'nullable|string|max:100',
             'department' => 'nullable|string|max:50',

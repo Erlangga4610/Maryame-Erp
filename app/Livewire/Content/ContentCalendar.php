@@ -4,11 +4,11 @@ namespace App\Livewire\Content;
 
 use App\Content\Enums\ContentStatus;
 use App\Content\Enums\ContentType;
+use App\Content\Models\Adjustment;
 use App\Content\Models\AdjustmentLog;
 use App\Content\Models\Approval;
 use App\Content\Models\Content;
 use App\Content\Models\ContentVersion;
-use App\Content\Models\TiktokQc;
 use App\Enums\ApprovalStatus;
 use App\Models\Platform;
 use App\Models\User;
@@ -21,6 +21,10 @@ use Livewire\WithPagination;
 class ContentCalendar extends Component
 {
     use WithFileUploads, WithPagination;
+    use Traits\WithApprovalPipeline;
+    use Traits\WithPublishingReporting;
+    use Traits\WithAssetManagement;
+    use Traits\WithCapacityPlanning;
 
     public $selectedPlatform = '';
 
@@ -58,290 +62,9 @@ class ContentCalendar extends Component
 
     public $showUnscheduledFilters = false;
 
-    public $showApproveModal = false;
-
-    public $approveContentId = null;
-
-    public $approveStage = null;
-
-    public $approveNotes = '';
-
-    public $showQcModal = false;
-
-    public $qcContentId = null;
-
-    public $showScheduleModal = false;
-
-    public $scheduleContentId = null;
-
-    public $scheduleDate = '';
-
-    public $scheduleTime = '';
-
-    public $showPublishModal = false;
-
-    public $publishContentId = null;
-
-    public $publishLiveUrl = '';
-
-    public $showChecklistModal = false;
-
-    public $checklistContentId = null;
-
-    public $checklist = [];
-
-    public $qc = [
-        'k1_audio_original' => null,
-        'k2_demo_penggunaan' => null,
-        'k3_produk_visible' => null,
-        'k4_manfaat_verbal' => null,
-        'k5_tambahan' => null,
-        'k6_tambahan' => null,
-        'k5_label' => '',
-        'k6_label' => '',
-        'has_shopping_cart' => false,
-        'notes' => '',
-    ];
-
-    public $capacityWeekStart = null;
-
-    public $showCapacityEditModal = false;
-
-    public $capacityEditUserId = null;
-
-    public $capacityEditUserName = '';
-
-    public $capacityEditMaxHours = 40;
-
-    public $capacityEditContents = [];
-
-    public $capacityResolutionNotes = '';
-
-    public $capacityResolutionStep = 0;
-
-    public $confirmByUserId = null;
-
-    public function capacityGoToToday()
-    {
-        $this->capacityWeekStart = now()->startOfWeek();
-    }
-
-    public function capacityPreviousWeek()
-    {
-        $this->capacityWeekStart = $this->capacityWeekStart->copy()->subWeek();
-    }
-
-    public function capacityNextWeek()
-    {
-        $this->capacityWeekStart = $this->capacityWeekStart->copy()->addWeek();
-    }
-
-    public function getCapacityWeekEndProperty()
-    {
-        return $this->capacityWeekStart->copy()->endOfWeek();
-    }
-
-    public function getCapacityDataProperty()
-    {
-        $start = $this->capacityWeekStart;
-        $end = $start->copy()->endOfWeek();
-
-        $contents = Content::with(['picCopy', 'picVisual', 'picVideo'])
-            ->where(function ($q) use ($start, $end) {
-                $q->whereBetween('deadline_produksi', [$start, $end])
-                    ->orWhereBetween('publish_date', [$start, $end]);
-            })
-            ->get();
-
-        $users = [];
-
-        foreach ($contents as $c) {
-            if ($c->est_copy_hours && $c->pic_copy_id) {
-                $users[$c->pic_copy_id]['name'] = $c->picCopy->name;
-                $users[$c->pic_copy_id]['role'] = 'Copy';
-                $users[$c->pic_copy_id]['total'] = ($users[$c->pic_copy_id]['total'] ?? 0) + (float) $c->est_copy_hours;
-                $users[$c->pic_copy_id]['contents'][] = [
-                    'id' => $c->id,
-                    'code' => $c->content_code,
-                    'theme' => $c->theme,
-                    'hours' => (float) $c->est_copy_hours,
-                ];
-            }
-            if ($c->est_visual_hours && $c->pic_visual_id) {
-                $users[$c->pic_visual_id]['name'] = $c->picVisual->name;
-                $users[$c->pic_visual_id]['role'] = 'Visual';
-                $users[$c->pic_visual_id]['total'] = ($users[$c->pic_visual_id]['total'] ?? 0) + (float) $c->est_visual_hours;
-                $users[$c->pic_visual_id]['contents'][] = [
-                    'id' => $c->id,
-                    'code' => $c->content_code,
-                    'theme' => $c->theme,
-                    'hours' => (float) $c->est_visual_hours,
-                ];
-            }
-            if ($c->est_video_hours && $c->pic_video_id) {
-                $users[$c->pic_video_id]['name'] = $c->picVideo->name;
-                $users[$c->pic_video_id]['role'] = 'Video';
-                $users[$c->pic_video_id]['total'] = ($users[$c->pic_video_id]['total'] ?? 0) + (float) $c->est_video_hours;
-                $users[$c->pic_video_id]['contents'][] = [
-                    'id' => $c->id,
-                    'code' => $c->content_code,
-                    'theme' => $c->theme,
-                    'hours' => (float) $c->est_video_hours,
-                ];
-            }
-        }
-
-        foreach ($users as $id => &$row) {
-            $setting = \App\Models\UserCapacitySetting::where('user_id', $id)
-                ->where('effective_from', '<=', $start)
-                ->orderBy('effective_from', 'desc')
-                ->with('confirmer')
-                ->first();
-
-            $row['max'] = $setting ? (float) $setting->max_hours : 40;
-            $row['total'] = $row['total'] ?? 0;
-            $row['contents'] = $row['contents'] ?? [];
-            $row['resolution_step'] = $setting?->resolution_step ?? 0;
-            $row['resolution_notes'] = $setting?->resolution_notes;
-            $row['confirmed_by'] = $setting?->confirmer?->name;
-            $row['confirmed_at'] = $setting?->confirmed_at;
-            $row['setting_id'] = $setting?->id;
-        }
-
-        return $users;
-    }
-
-    public function openCapacityEdit($userId)
-    {
-        $this->capacityEditUserId = $userId;
-        $user = \App\Models\User::find($userId);
-        $this->capacityEditUserName = $user?->name ?? 'User';
-
-        $setting = \App\Models\UserCapacitySetting::where('user_id', $userId)
-            ->where('effective_from', '<=', $this->capacityWeekStart)
-            ->orderBy('effective_from', 'desc')
-            ->first();
-
-        $this->capacityEditMaxHours = $setting ? (float) $setting->max_hours : 40;
-
-        $this->capacityEditContents = collect($this->capacity_data)
-            ->get($userId, [])['contents'] ?? [];
-
-        $this->showCapacityEditModal = true;
-    }
-
-    public function closeCapacityEditModal()
-    {
-        $this->showCapacityEditModal = false;
-        $this->capacityEditUserId = null;
-    }
-
-    public function saveCapacitySettings()
-    {
-        $this->validate([
-            'capacityEditMaxHours' => 'required|numeric|min:1|max:168',
-        ]);
-
-        \App\Models\UserCapacitySetting::updateOrCreate(
-            [
-                'user_id' => $this->capacityEditUserId,
-                'effective_from' => $this->capacityWeekStart,
-            ],
-            [
-                'max_hours' => $this->capacityEditMaxHours,
-            ],
-        );
-
-        flash()->success('Kapasitas berhasil disimpan.');
-        $this->closeCapacityEditModal();
-    }
-
-    public function saveCapacityResolution($userId)
-    {
-        $this->validate([
-            'capacityResolutionStep' => 'required|integer|min:1|max:5',
-            'capacityResolutionNotes' => 'required|string|max:1000',
-        ]);
-
-        \App\Models\UserCapacitySetting::updateOrCreate(
-            [
-                'user_id' => $userId,
-                'effective_from' => $this->capacityWeekStart,
-            ],
-            [
-                'resolution_step' => $this->capacityResolutionStep,
-                'resolution_notes' => $this->capacityResolutionNotes,
-            ],
-        );
-
-        $this->reset('capacityResolutionNotes', 'capacityResolutionStep');
-        flash()->success('Tindakan kapasitas berhasil dicatat.');
-    }
-
-    public function confirmCapacity($userId)
-    {
-        \App\Models\UserCapacitySetting::updateOrCreate(
-            [
-                'user_id' => $userId,
-                'effective_from' => $this->capacityWeekStart,
-            ],
-            [
-                'confirmed_by' => Auth::id(),
-                'confirmed_at' => now(),
-            ],
-        );
-
-        flash()->success('Kapasitas sudah dikonfirmasi.');
-    }
-
-    public function getQcSuggestedSubtypeProperty(): ?string
-    {
-        if (! $this->qcContentId) {
-            return null;
-        }
-
-        $values = collect($this->qc)->only([
-            'k1_audio_original', 'k2_demo_penggunaan', 'k3_produk_visible',
-            'k4_manfaat_verbal', 'k5_tambahan', 'k6_tambahan',
-        ]);
-
-        if ($values->contains(null)) {
-            return null;
-        }
-
-        $allPass = $values->every(fn ($v) => $v === 'pass');
-        $hasCart = $this->qc['has_shopping_cart'] ?? false;
-
-        if ($hasCart && $allPass) {
-            return 'KK Interaktif';
-        }
-
-        if ($hasCart) {
-            return 'KK Soft Selling';
-        }
-
-        return 'Non-KK';
-    }
-
     public $showBriefModal = false;
 
     public $briefContent = null;
-
-    public $showVersionModal = false;
-
-    public $versionContentId = null;
-
-    public $showAdjustmentModal = false;
-
-    public $adjustmentContentId = null;
-
-    public $finalAsset;
-
-    public $thumbnail;
-
-    public $existingFinalAsset = null;
-
-    public $existingThumbnail = null;
 
     public $form = [
         'platform_id' => '',
@@ -351,7 +74,7 @@ class ContentCalendar extends Component
         'theme' => '',
         'caption' => '',
         'description' => '',
-        'priority' => 'medium',
+        'priority' => 'rutin',
         'publish_date' => '',
         'deadline_produksi' => '',
         'pic_copy_id' => '',
@@ -388,10 +111,12 @@ class ContentCalendar extends Component
 
     public $newContentGroupName = '';
 
+    public $fastTrack = false;
+
     protected $rules = [
         'form.platform_id' => 'required|exists:platforms,id',
         'form.theme' => 'required|string|max:200',
-        'form.priority' => 'required|in:high,medium,low',
+        'form.priority' => 'required|in:rutin,campaign,spontan',
         'form.publish_date' => 'nullable|date',
         'form.deadline_produksi' => 'nullable|date',
         'form.est_copy_hours' => 'nullable|numeric|min:0|max:999',
@@ -538,10 +263,10 @@ class ContentCalendar extends Component
             'done' => 'approved',
         ];
 
-        $content = Content::findOrFail($contentId);
+        $content = Content::with('brief')->findOrFail($contentId);
         $targetStatus = $statusMap[$column] ?? null;
 
-        if ($targetStatus === 'in_production' && ! $content->is_brief_final) {
+        if ($targetStatus === 'in_production' && ! ($content->brief?->is_final ?? $content->is_brief_final)) {
             flash()->error('Brief harus difinalisasi terlebih dahulu sebelum produksi.');
 
             return;
@@ -555,9 +280,19 @@ class ContentCalendar extends Component
 
     public function openCreateModal()
     {
+        $this->reset('form', 'finalAsset', 'thumbnail', 'existingFinalAsset', 'existingThumbnail', 'editingContentStatus', 'adjustmentType', 'adjustmentReason', 'fastTrack');
+        $this->resetValidation();
+        $this->modalMode = 'create';
+        $this->showModal = true;
+    }
+
+    public function openFastTrackModal()
+    {
         $this->reset('form', 'finalAsset', 'thumbnail', 'existingFinalAsset', 'existingThumbnail', 'editingContentStatus', 'adjustmentType', 'adjustmentReason');
         $this->resetValidation();
         $this->modalMode = 'create';
+        $this->fastTrack = true;
+        $this->form['priority'] = 'spontan';
         $this->showModal = true;
     }
 
@@ -592,7 +327,7 @@ class ContentCalendar extends Component
         $raw['originality_instruction'] = $brief?->originality_instruction ?? $content->originality_instruction;
         $raw['thumbnail_note'] = $brief?->thumbnail_note ?? $content->thumbnail_note;
 
-        $raw['priority'] = $content->priority?->value ?? 'medium';
+        $raw['priority'] = $content->priority?->value ?? 'rutin';
         $raw['publish_date'] = $content->publish_date?->format('Y-m-d') ?? '';
         $raw['deadline_produksi'] = $content->deadline_produksi?->format('Y-m-d') ?? '';
         $this->form = $raw;
@@ -611,7 +346,7 @@ class ContentCalendar extends Component
     {
         $this->validate();
 
-        if ($this->modalMode === 'edit' && $this->editingContentStatus !== 'draft' && ! $this->adjustmentReason) {
+        if ($this->modalMode === 'edit' && $this->editingContentStatus !== 'draft' && $this->adjustmentType !== 'minor' && ! $this->adjustmentReason) {
             $this->addError('adjustmentReason', 'Alasan adjustment wajib diisi.');
             return;
         }
@@ -662,7 +397,19 @@ class ContentCalendar extends Component
                 'created_by' => $user->id,
             ]);
 
-            flash()->success('Konten berhasil dibuat!');
+            if ($this->fastTrack) {
+                $content->status = \App\Content\Enums\ContentStatus::IN_PRODUCTION;
+                $content->save();
+
+                Approval::updateOrCreate(
+                    ['content_id' => $content->id, 'stage' => 'cw'],
+                    ['status' => ApprovalStatus::PENDING->value, 'approver_id' => null, 'notes' => null],
+                );
+
+                flash()->success('Fast-Track: konten langsung masuk In Production!');
+            } else {
+                flash()->success('Konten berhasil dibuat!');
+            }
         } else {
             $content = Content::findOrFail($this->contentId);
 
@@ -748,6 +495,8 @@ class ContentCalendar extends Component
                     ]);
                 }
 
+                $this->saveBrief($content->id, $data);
+
                 Adjustment::create([
                     'content_id' => $content->id,
                     'type' => 'reactive',
@@ -800,6 +549,8 @@ class ContentCalendar extends Component
                     ]);
                 }
 
+                $this->saveBrief($content->id, $data);
+
                 if ($isAdjustment && $this->adjustmentType === 'minor') {
                     Adjustment::create([
                         'content_id' => $content->id,
@@ -822,14 +573,15 @@ class ContentCalendar extends Component
         $this->resetValidation();
     }
 
-    private function saveBrief($contentId)
+    private function saveBrief($contentId, $data = null)
     {
         $briefFields = ['angle', 'positioning', 'target_audience', 'key_message', 'tone',
             'copy_brief', 'aspect_ratio', 'resolution', 'duration', 'format_file',
             'hashtag', 'audio_guidance', 'originality_instruction', 'thumbnail_note',
             'visual_brief', 'video_brief'];
 
-        $briefData = collect($this->form)->only($briefFields)
+        $source = $data ?? $this->form;
+        $briefData = collect($source)->only($briefFields)
             ->map(fn ($v) => $v === '' ? null : $v)
             ->all();
 
@@ -842,7 +594,7 @@ class ContentCalendar extends Component
     public function closeModal()
     {
         $this->showModal = false;
-        $this->reset('form', 'editingContentStatus', 'adjustmentType', 'adjustmentReason', 'newContentGroupName');
+        $this->reset('form', 'editingContentStatus', 'adjustmentType', 'adjustmentReason', 'newContentGroupName', 'fastTrack');
         $this->resetValidation();
     }
 
@@ -923,213 +675,6 @@ class ContentCalendar extends Component
         $this->briefContent = null;
     }
 
-    public function openQcModal($id)
-    {
-        $this->qcContentId = $id;
-        $this->resetQcForm();
-
-        $existing = TiktokQc::where('content_id', $id)->first();
-        if ($existing) {
-            $this->qc = $existing->only([
-                'k1_audio_original', 'k2_demo_penggunaan', 'k3_produk_visible',
-                'k4_manfaat_verbal', 'k5_tambahan', 'k6_tambahan',
-                'k5_label', 'k6_label', 'has_shopping_cart', 'notes',
-            ]);
-        }
-
-        $this->showQcModal = true;
-    }
-
-    public function closeQcModal()
-    {
-        $this->showQcModal = false;
-        $this->qcContentId = null;
-        $this->resetQcForm();
-    }
-
-    public function resetQcForm()
-    {
-        $this->qc = [
-            'k1_audio_original' => null,
-            'k2_demo_penggunaan' => null,
-            'k3_produk_visible' => null,
-            'k4_manfaat_verbal' => null,
-            'k5_tambahan' => null,
-            'k6_tambahan' => null,
-            'k5_label' => '',
-            'k6_label' => '',
-            'has_shopping_cart' => false,
-            'notes' => '',
-        ];
-    }
-
-    public function saveQc()
-    {
-        $this->validate([
-            'qc.notes' => 'nullable|string|max:1000',
-            'qc.k1_audio_original' => 'required|in:pass,fail,na',
-            'qc.k2_demo_penggunaan' => 'required|in:pass,fail,na',
-            'qc.k3_produk_visible' => 'required|in:pass,fail,na',
-            'qc.k4_manfaat_verbal' => 'required|in:pass,fail,na',
-            'qc.k5_tambahan' => 'nullable|in:pass,fail,na',
-            'qc.k6_tambahan' => 'nullable|in:pass,fail,na',
-        ]);
-
-        $data = collect($this->qc)->map(fn ($v) => $v === '' ? null : $v)->all();
-        $data['checked_by'] = Auth::id();
-        $data['checked_at'] = now();
-
-        $criteriaKeys = ['k1_audio_original', 'k2_demo_penggunaan', 'k3_produk_visible',
-            'k4_manfaat_verbal', 'k5_tambahan', 'k6_tambahan'];
-
-        $allPass = collect($data)->only($criteriaKeys)->every(fn ($v) => $v === 'pass');
-        $data['status'] = $allPass ? 'passed' : 'need_revision';
-
-        $qcRecord = TiktokQc::updateOrCreate(
-            ['content_id' => $this->qcContentId],
-            $data,
-        );
-
-        if ($qcRecord->allPass()) {
-            $content = Content::with('platform')->find($this->qcContentId);
-            if ($content && $content->platform->code === 'TKM') {
-                $content->update(['tiktok_subtype' => $qcRecord->suggestedSubtype()]);
-            }
-        }
-
-        if ($allPass) {
-            flash()->success('QC TikTok selesai — semua checklist terpenuhi!');
-        } else {
-            flash()->warning('QC TikTok perlu perbaikan — ada item yang belum terpenuhi.');
-        }
-
-        $this->closeQcModal();
-    }
-
-    public function openScheduleModal($id)
-    {
-        $this->scheduleContentId = $id;
-        $content = Content::find($id);
-        $this->scheduleDate = $content?->publish_date?->format('Y-m-d') ?? now()->format('Y-m-d');
-        $this->scheduleTime = $content?->publish_time?->format('H:i') ?? '08:00';
-        $this->showScheduleModal = true;
-    }
-
-    public function closeScheduleModal()
-    {
-        $this->showScheduleModal = false;
-        $this->scheduleContentId = null;
-    }
-
-    public function confirmSchedule()
-    {
-        $this->validate([
-            'scheduleDate' => 'required|date|after_or_equal:today',
-            'scheduleTime' => 'required|date_format:H:i',
-        ]);
-
-        $content = Content::findOrFail($this->scheduleContentId);
-        $content->update([
-            'publish_date' => $this->scheduleDate,
-            'publish_time' => $this->scheduleTime,
-            'status' => 'scheduled',
-        ]);
-
-        flash()->success('Konten berhasil dijadwalkan!');
-        $this->closeScheduleModal();
-    }
-
-    public function openPublishModal($id)
-    {
-        $this->publishContentId = $id;
-        $content = Content::find($id);
-        $this->publishLiveUrl = $content?->live_url ?? '';
-        $this->showPublishModal = true;
-    }
-
-    public function closePublishModal()
-    {
-        $this->showPublishModal = false;
-        $this->publishContentId = null;
-        $this->publishLiveUrl = '';
-    }
-
-    public function confirmPublish()
-    {
-        $this->validate([
-            'publishLiveUrl' => 'required|url|max:500',
-        ]);
-
-        $content = Content::findOrFail($this->publishContentId);
-        $content->update([
-            'live_url' => $this->publishLiveUrl,
-            'status' => 'published',
-        ]);
-
-        $this->closePublishModal();
-        flash()->success('Konten berhasil dipublikasikan!');
-    }
-
-    public function openChecklistModal($id)
-    {
-        $this->checklistContentId = $id;
-        $this->resetChecklistForm();
-
-        $existing = \App\Content\Models\PostPublishChecklist::where('content_id', $id)->first();
-        if ($existing) {
-            $this->checklist = $existing->only([
-                'link_works', 'thumbnail_visible', 'caption_accurate',
-                'hashtags_included', 'cta_functional', 'product_tagged',
-                'no_typo', 'audio_sync', 'notes',
-            ]);
-        }
-
-        $this->showChecklistModal = true;
-    }
-
-    public function closeChecklistModal()
-    {
-        $this->showChecklistModal = false;
-        $this->checklistContentId = null;
-        $this->resetChecklistForm();
-    }
-
-    public function resetChecklistForm()
-    {
-        $this->checklist = [
-            'link_works' => false,
-            'thumbnail_visible' => false,
-            'caption_accurate' => false,
-            'hashtags_included' => false,
-            'cta_functional' => false,
-            'product_tagged' => false,
-            'no_typo' => false,
-            'audio_sync' => false,
-            'notes' => '',
-        ];
-    }
-
-    public function saveChecklist()
-    {
-        $data = collect($this->checklist)->map(fn ($v) => $v === '' ? null : $v)->all();
-        $data['checked_by'] = Auth::id();
-        $data['checked_at'] = now();
-
-        \App\Content\Models\PostPublishChecklist::updateOrCreate(
-            ['content_id' => $this->checklistContentId],
-            $data,
-        );
-
-        $allChecked = collect($this->checklist)->except('notes')->every(fn ($v) => $v === true);
-        if ($allChecked) {
-            flash()->success('Semua checklist terpenuhi!');
-        } else {
-            flash()->warning('Ada item yang belum tercentang.');
-        }
-
-        $this->closeChecklistModal();
-    }
-
     public function startProduction($id)
     {
         $content = Content::findOrFail($id);
@@ -1139,7 +684,8 @@ class ContentCalendar extends Component
             return;
         }
 
-        $content->update(['status' => 'in_production']);
+        $content->status = \App\Content\Enums\ContentStatus::IN_PRODUCTION;
+        $content->save();
         flash()->success('Konten masuk ke tahap produksi!');
     }
 
@@ -1179,150 +725,6 @@ class ContentCalendar extends Component
         flash()->success('Konten dikirim untuk review copy (menunggu CW)!');
     }
 
-    public function confirmApprove($id, $stage)
-    {
-        $this->approveContentId = $id;
-        $this->approveStage = $stage;
-        $this->approveNotes = '';
-        $this->showApproveModal = true;
-    }
-
-    public function cancelApprove()
-    {
-        $this->showApproveModal = false;
-        $this->approveContentId = null;
-        $this->approveStage = null;
-        $this->approveNotes = '';
-    }
-
-    public function approveContent()
-    {
-        $approval = Approval::where('content_id', $this->approveContentId)
-            ->where('stage', $this->approveStage)
-            ->firstOrFail();
-
-        $approval->status = ApprovalStatus::APPROVED->value;
-        $approval->approver_id = Auth::id();
-        $approval->notes = $this->approveNotes;
-        $approval->save();
-
-        $content = Content::findOrFail($this->approveContentId);
-
-        $nextStage = match ($this->approveStage) {
-            'cw' => 'csp',
-            'csp' => 'sms',
-            'sms' => $content->has_claim ? 'rnd' : ($content->is_sensitive ? 'legal' : null),
-            'rnd' => $content->is_sensitive ? 'legal' : null,
-            'legal' => null,
-            default => null,
-        };
-
-        if ($nextStage) {
-            Approval::updateOrCreate(
-                ['content_id' => $content->id, 'stage' => $nextStage],
-                ['status' => ApprovalStatus::PENDING->value, 'approver_id' => null, 'notes' => null],
-            );
-        } else {
-            $content->status = ContentStatus::APPROVED;
-            $content->save();
-        }
-
-        flash()->success('Konten berhasil di-approve!');
-        $this->cancelApprove();
-    }
-
-    public function reviseContent()
-    {
-        $approval = Approval::where('content_id', $this->approveContentId)
-            ->where('stage', $this->approveStage)
-            ->firstOrFail();
-
-        $approval->status = ApprovalStatus::REVISION->value;
-        $approval->approver_id = Auth::id();
-        $approval->notes = $this->approveNotes;
-        $approval->save();
-
-        $content = Content::findOrFail($this->approveContentId);
-        $content->status = ContentStatus::IN_PRODUCTION;
-        $content->save();
-
-        flash()->success('Revisi diminta. Konten dikembalikan ke In Production.');
-        $this->cancelApprove();
-    }
-
-    public function approveAdjustment($adjustmentId)
-    {
-        $adjustment = Adjustment::findOrFail($adjustmentId);
-
-        $allowed = Auth::user()->isSuperAdmin()
-            || Auth::user()->hasRole('MC_BM')
-            || ($adjustment->type === 'reactive' && Auth::user()->hasRole('CSP'));
-
-        if (! $allowed) {
-            flash()->error('Hanya MC/BM yang bisa menyetujui adjustment.');
-            return;
-        }
-
-        $content = $adjustment->content;
-
-        if ($adjustment->type === 'major' && $adjustment->changed_fields) {
-            $original = $content->fresh()->toArray();
-            $content->update($adjustment->changed_fields);
-            $content->version = $content->version + 1;
-            $content->save();
-
-            ContentVersion::create([
-                'content_id' => $content->id,
-                'version' => $content->version,
-                'data' => $content->fresh()->toArray(),
-                'created_by' => Auth::id(),
-            ]);
-
-            foreach ($adjustment->changed_fields as $field => $new) {
-                $old = $original[$field] ?? null;
-                if ($old !== $new && ! in_array($field, ['created_at', 'updated_at', 'id', 'version'])) {
-                    AdjustmentLog::create([
-                        'content_id' => $content->id,
-                        'user_id' => Auth::id(),
-                        'field' => $field,
-                        'old_value' => is_bool($old) ? ($old ? '1' : '0') : (string) $old,
-                        'new_value' => is_bool($new) ? ($new ? '1' : '0') : (string) $new,
-                        'adjustment_type' => 'major',
-                        'adjustment_reason' => $adjustment->reason,
-                    ]);
-                }
-            }
-        }
-
-        $adjustment->status = 'approved';
-        $adjustment->reviewed_by = Auth::id();
-        $adjustment->reviewed_at = now();
-        $adjustment->save();
-
-        flash()->success('Adjustment '.$adjustment->type.' disetujui.');
-    }
-
-    public function rejectAdjustment($adjustmentId)
-    {
-        $adjustment = Adjustment::findOrFail($adjustmentId);
-
-        $allowed = Auth::user()->isSuperAdmin()
-            || Auth::user()->hasRole('MC_BM')
-            || ($adjustment->type === 'reactive' && Auth::user()->hasRole('CSP'));
-
-        if (! $allowed) {
-            flash()->error('Hanya MC/BM yang bisa menolak adjustment.');
-            return;
-        }
-
-        $adjustment->status = 'rejected';
-        $adjustment->reviewed_by = Auth::id();
-        $adjustment->reviewed_at = now();
-        $adjustment->save();
-
-        flash()->success('Adjustment '.$adjustment->type.' ditolak.');
-    }
-
     public function finalizeBrief($id)
     {
         if (! Auth::user()->isSuperAdmin() && ! Auth::user()->hasRole('CSP')) {
@@ -1352,64 +754,6 @@ class ContentCalendar extends Component
         $this->reset(['selectedPlatform', 'selectedStatus', 'selectedPriority', 'search']);
     }
 
-    public function openVersionModal($id)
-    {
-        $this->versionContentId = $id;
-        $this->showVersionModal = true;
-    }
 
-    public function closeVersionModal()
-    {
-        $this->showVersionModal = false;
-        $this->versionContentId = null;
-    }
 
-    public function archiveVersion($versionId)
-    {
-        $version = ContentVersion::findOrFail($versionId);
-
-        $version->update([
-            'is_archived' => true,
-            'archived_by' => Auth::id(),
-            'archived_at' => now(),
-        ]);
-
-        flash()->success('Versi berhasil diarsipkan.');
-    }
-
-    public function openAdjustmentModal($id)
-    {
-        $this->adjustmentContentId = $id;
-        $this->showAdjustmentModal = true;
-    }
-
-    public function closeAdjustmentModal()
-    {
-        $this->showAdjustmentModal = false;
-        $this->adjustmentContentId = null;
-    }
-
-    public function getVersionHistoryProperty()
-    {
-        if (! $this->versionContentId) {
-            return collect();
-        }
-
-        return ContentVersion::with('creator')
-            ->where('content_id', $this->versionContentId)
-            ->orderBy('version', 'desc')
-            ->get();
-    }
-
-    public function getAdjustmentLogsProperty()
-    {
-        if (! $this->adjustmentContentId) {
-            return collect();
-        }
-
-        return AdjustmentLog::with('user')
-            ->where('content_id', $this->adjustmentContentId)
-            ->orderBy('created_at', 'desc')
-            ->get();
-    }
 }

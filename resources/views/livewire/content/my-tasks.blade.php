@@ -46,9 +46,9 @@
                                 default => 'zinc',
                             }">{{ $content->status->label() }}</flux:badge>
                             <flux:badge size="sm" :color="match($content->priority->value) {
-                                'high' => 'red',
-                                'medium' => 'amber',
-                                'low' => 'zinc',
+                                'campaign' => 'red',
+                                'spontan' => 'amber',
+                                'rutin' => 'zinc',
                                 default => 'zinc',
                             }">{{ ucfirst($content->priority->value) }}</flux:badge>
                         </div>

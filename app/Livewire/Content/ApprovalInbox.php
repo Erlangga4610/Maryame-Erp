@@ -8,6 +8,7 @@ use App\Content\Models\Approval;
 use App\Content\Models\Content;
 use App\Content\Models\ContentVersion;
 use App\Enums\ApprovalStatus;
+use App\Enums\ContentStatus;
 use Illuminate\Support\Facades\Auth;
 use Livewire\Component;
 
@@ -97,13 +98,24 @@ class ApprovalInbox extends Component
         $approval->notes = $this->approveNotes;
         $approval->save();
 
-        $allApproved = Approval::where('content_id', $this->approveContentId)
-            ->where('status', '!=', ApprovalStatus::APPROVED->value)
-            ->doesntExist();
+        $content = Content::findOrFail($this->approveContentId);
 
-        if ($allApproved) {
-            $content = Content::findOrFail($this->approveContentId);
-            $content->status = 'approved';
+        $nextStage = match ($this->approveStage) {
+            'cw' => 'csp',
+            'csp' => 'sms',
+            'sms' => $content->has_claim ? 'rnd' : ($content->is_sensitive ? 'legal' : null),
+            'rnd' => $content->is_sensitive ? 'legal' : null,
+            'legal' => null,
+            default => null,
+        };
+
+        if ($nextStage) {
+            Approval::updateOrCreate(
+                ['content_id' => $content->id, 'stage' => $nextStage],
+                ['status' => ApprovalStatus::PENDING->value, 'approver_id' => null, 'notes' => null],
+            );
+        } else {
+            $content->status = ContentStatus::APPROVED;
             $content->save();
         }
 

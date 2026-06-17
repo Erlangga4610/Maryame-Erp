@@ -19,9 +19,9 @@
                 wire:model="form.priority"
                 placeholder="Pilih priority"
             >
-                <option value="high">High</option>
-                <option value="medium">Medium</option>
-                <option value="low">Low</option>
+                <option value="rutin">Rutin</option>
+                <option value="campaign">Campaign</option>
+                <option value="spontan">Spontan</option>
             </flux:select>
             <flux:error name="form.priority" />
         </flux:field>

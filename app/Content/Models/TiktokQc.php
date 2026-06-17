@@ -42,8 +42,19 @@ class TiktokQc extends Model
         return $this->belongsTo(User::class, 'checked_by');
     }
 
+    public function criteriaResults()
+    {
+        return $this->hasMany(QcCriteriaResult::class, 'qc_check_id');
+    }
+
     public function allPass(): bool
     {
+        $results = $this->criteriaResults;
+
+        if ($results->isNotEmpty()) {
+            return $results->count() === 6 && $results->every(fn ($r) => $r->result === 'pass');
+        }
+
         return $this->k1_audio_original === 'pass'
             && $this->k2_demo_penggunaan === 'pass'
             && $this->k3_produk_visible === 'pass'

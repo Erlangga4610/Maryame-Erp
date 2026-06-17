@@ -13,4 +13,5 @@
     @include('livewire.content.partials.modals.schedule')
     @include('livewire.content.partials.modals.publish')
     @include('livewire.content.partials.modals.post-publish-checklist')
+    @include('livewire.content.partials.modals.adjustment-log')
 </div>

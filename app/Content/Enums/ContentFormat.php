@@ -4,16 +4,24 @@ namespace App\Content\Enums;
 
 enum ContentFormat: string
 {
-    case IMAGE = 'image';
     case VIDEO = 'video';
     case CAROUSEL = 'carousel';
+    case PHOTO = 'photo';
+    case STORIES = 'stories';
+    case LISTING = 'listing';
+    case BLOG = 'blog';
+    case BROADCAST = 'broadcast';
 
     public function label(): string
     {
         return match ($this) {
-            self::IMAGE => 'Image',
             self::VIDEO => 'Video',
             self::CAROUSEL => 'Carousel',
+            self::PHOTO => 'Photo',
+            self::STORIES => 'Stories',
+            self::LISTING => 'Listing',
+            self::BLOG => 'Blog',
+            self::BROADCAST => 'Broadcast',
         };
     }
 

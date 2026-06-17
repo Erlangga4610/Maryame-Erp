@@ -4,18 +4,22 @@ namespace App\Content\Enums;
 
 enum ContentType: string
 {
-    case FEED = 'feed';
-    case REELS = 'reels';
-    case STORY = 'story';
-    case CAROUSEL = 'carousel';
+    case EDUKASI = 'edukasi';
+    case JUALAN = 'jualan';
+    case TESTIMONI = 'testimoni';
+    case TRENDING = 'trending';
+    case UGC = 'ugc';
+    case CAMPAIGN = 'campaign';
 
     public function label(): string
     {
         return match ($this) {
-            self::FEED => 'Feed Post',
-            self::REELS => 'Reels Video',
-            self::STORY => 'Story',
-            self::CAROUSEL => 'Carousel',
+            self::EDUKASI => 'Edukasi',
+            self::JUALAN => 'Jualan',
+            self::TESTIMONI => 'Testimoni',
+            self::TRENDING => 'Trending',
+            self::UGC => 'UGC',
+            self::CAMPAIGN => 'Campaign',
         };
     }
 

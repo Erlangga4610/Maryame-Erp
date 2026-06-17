@@ -25,7 +25,7 @@ return new class extends Migration
 
             $table->string('content_type', 20)->nullable();
             $table->string('format', 20)->nullable();
-            $table->string('priority', 10)->default('medium');
+            $table->string('priority', 10)->default('rutin');
 
             $table->string('tiktok_subtype', 30)->nullable();
 

@@ -1,6 +1,52 @@
-<div wire:key="kanban-board" x-show="$wire.viewMode === 'kanban'" class="pb-2 overflow-x-auto"
-     x-data="{ dragId: null, dragEl: null }"
+<div wire:key="kanban-board" x-show="$wire.viewMode === 'kanban'"
+     x-data="{
+         dragId: null,
+         dragEl: null,
+         sbDragging: false,
+         sbStartX: 0,
+         sbScrollLeft: 0,
+         shouldSkip(el) {
+             return el.closest('button, a, input, select, textarea, [draggable]');
+         },
+         grabStart(e) {
+             if (e.button !== 0 || this.shouldSkip(e.target)) return;
+             this.sbDragging = true;
+             this.sbStartX = e.pageX - this.$el.getBoundingClientRect().left;
+             this.sbScrollLeft = this.$el.scrollLeft;
+             this.$el.classList.remove('cursor-grab');
+             this.$el.classList.add('cursor-grabbing', 'select-none');
+         },
+         grabMove(e) {
+             if (!this.sbDragging) return;
+             e.preventDefault();
+             const x = e.pageX - this.$el.getBoundingClientRect().left;
+             this.$el.scrollLeft = this.sbScrollLeft - (x - this.sbStartX);
+         },
+         grabEnd() {
+             if (!this.sbDragging) return;
+             this.sbDragging = false;
+             this.$el.classList.remove('cursor-grabbing', 'select-none');
+             this.$el.classList.add('cursor-grab');
+         },
+         touchStart(e) {
+             this.sbStartX = e.touches[0].pageX - this.$el.getBoundingClientRect().left;
+             this.sbScrollLeft = this.$el.scrollLeft;
+         },
+         touchMove(e) {
+             if (e.touches.length !== 1) return;
+             const x = e.touches[0].pageX - this.$el.getBoundingClientRect().left;
+             this.$el.scrollLeft = this.sbScrollLeft - (x - this.sbStartX);
+         }
+     }"
      x-on:kanban-move.window="$wire.moveToColumn($event.detail.id, $event.detail.column)"
+     x-on:mousedown="grabStart"
+     x-on:mousemove="grabMove"
+     x-on:mouseup="grabEnd"
+     x-on:mouseleave="grabEnd"
+     x-on:touchstart="touchStart"
+     x-on:touchmove="touchMove"
+     x-on:touchend="sbDragging = false"
+     class="pb-0 overflow-x-auto cursor-grab scrollbar-thin relative"
 >
     <div class="flex gap-3 min-w-[900px]">
         @php
@@ -13,7 +59,7 @@
         @endphp
         @foreach($kanbanColumns as $key => $column)
             @php $cc = $columnColors[$key] ?? $columnColors['todo']; @endphp
-            <div class="flex flex-col flex-1 min-w-[210px] rounded-xl bg-zinc-100/80 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 {{ $cc['border'] }} border-l-4">
+            <div wire:key="kanban-col-{{ $key }}" class="flex flex-col flex-1 min-w-[210px] rounded-xl bg-zinc-100/80 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 {{ $cc['border'] }} border-l-4">
                 {{-- Header --}}
                 <div class="flex items-center justify-between px-3 pt-3 pb-2 sticky top-0 bg-zinc-100/80 dark:bg-zinc-800/40 rounded-tr-xl z-10">
                     <div class="flex items-center gap-2">
@@ -26,7 +72,7 @@
                 {{-- Card list / drop zone --}}
                 <div
                     data-column="{{ $key }}"
-                    class="flex flex-col gap-1.5 px-2 pb-2 min-h-[220px] transition-all duration-150 rounded-b-xl"
+                    class="flex flex-col gap-1.5 px-2 pb-2 flex-1 min-h-[220px] transition-all duration-150 rounded-b-xl"
                     x-on:dragenter.prevent="
                         if (! $el._dragCounter) $el._dragCounter = 0;
                         $el._dragCounter++;
@@ -93,14 +139,14 @@
 
                             <div class="flex items-center gap-1 mt-1">
                                 <button type="button" wire:click="openBriefModal({{ $content->id }})" class="text-[10px] text-pink-600 dark:text-pink-400 hover:underline flex items-center gap-1">
-                                    @if($content->is_brief_final)
+                                    @if($content->brief?->is_final ?? $content->is_brief_final)
                                         <span class="bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 px-1.5 py-0.5 rounded">Brief ✓</span>
                                     @else
                                         <span class="bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded">Brief</span>
                                     @endif
                                     <span>Lihat</span>
                                 </button>
-                                @if($isCsp && !$content->is_brief_final && $content->status->value === 'draft')
+                                @if($isCsp && !($content->brief?->is_final ?? $content->is_brief_final) && $content->status->value === 'draft')
                                     <button type="button" wire:click="finalizeBrief({{ $content->id }})" class="text-[10px] text-green-600 dark:text-green-400 hover:underline">
                                         Finalkan
                                     </button>
@@ -180,7 +226,7 @@
                                         @endphp
                                         @if($prevApproved)
                                             <button type="button" wire:click="confirmApprove({{ $content->id }}, '{{ $myStage }}')" class="text-xs text-white bg-green-600 hover:bg-green-700 px-2 py-0.5 rounded">Approve</button>
-                                            <button type="button" wire:click="confirmApprove({{ $content->id }}, '{{ $myStage }}')" class="text-xs text-amber-600 border border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-2 py-0.5 rounded">Revisi</button>
+                                            <button type="button" wire:click="directRevise({{ $content->id }}, '{{ $myStage }}')" class="text-xs text-amber-600 border border-amber-600 hover:bg-amber-50 dark:hover:bg-amber-900/20 px-2 py-0.5 rounded">Revisi</button>
                                         @else
                                             <span class="text-xs text-amber-600 dark:text-amber-400">⏳ Menunggu approval sebelumnya</span>
                                         @endif
@@ -251,9 +297,9 @@
 
                             @if($content->status->value === 'draft')
                                 <div class="mt-1.5 flex items-center gap-2">
-                                    <flux:button size="xs" variant="primary" color="blue" wire:click="startProduction({{ $content->id }})">
+                                    <button type="button" wire:click="startProduction({{ $content->id }})" class="text-xs text-blue-600 dark:text-blue-400 hover:underline transition-colors whitespace-nowrap">
                                         Mulai Produksi
-                                    </flux:button>
+                                    </button>
                                     @if($canCreate)
                                         <button type="button" wire:click="confirmDelete({{ $content->id }})" class="text-xs text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-300 hover:underline transition-colors">
                                             Hapus
@@ -284,5 +330,24 @@
                 </div>
             </div>
         @endforeach
+    </div>
+
+    {{-- DRAG ZONE — scroll grab area below the board --}}
+    <div class="min-w-[900px] h-28 rounded-lg mt-3 flex items-center justify-center cursor-grab hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20 transition-colors">
+        <div class="flex items-center gap-2 text-zinc-400 dark:text-zinc-500 pointer-events-none">
+            <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/>
+            </svg>
+            <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 5l7 7-7 7"/>
+            </svg>
+            <span class="text-xs font-mono tracking-wider uppercase">Klik &amp; Geser untuk scroll</span>
+            <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/>
+            </svg>
+            <svg class="size-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 19l-7-7 7-7"/>
+            </svg>
+        </div>
     </div>
 </div>

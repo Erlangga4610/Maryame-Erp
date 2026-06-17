@@ -28,7 +28,10 @@
     <flux:modal size="lg" wire:model="showModal" wire:key="create-edit-modal">
         <div x-data="{ tab: 'detail' }" class="p-6">
             <h2 class="text-lg font-bold mb-4">
-                {{ $modalMode === 'create' ? 'Buat Konten Baru' : 'Edit Konten' }}
+                {{ $modalMode === 'create' ? ($fastTrack ? 'Fast-Track — Konten Baru' : 'Buat Konten Baru') : 'Edit Konten' }}
+                @if($fastTrack)
+                    <flux:badge color="orange" size="sm" class="ml-2">Fast-Track</flux:badge>
+                @endif
             </h2>
 
             <div class="flex gap-1 mb-5 border-b border-zinc-200 dark:border-zinc-700 overflow-x-auto">

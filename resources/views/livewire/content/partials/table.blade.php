@@ -1,55 +1,55 @@
 <div x-show="$wire.viewMode === 'table'" class="overflow-x-auto">
-    <flux:table>
+    <flux:table class="text-xs">
         <flux:table.columns>
-            <flux:table.column>Kode</flux:table.column>
-            <flux:table.column>Platform</flux:table.column>
-            <flux:table.column>Group</flux:table.column>
-            <flux:table.column>Tema</flux:table.column>
-            <flux:table.column>Publish Date</flux:table.column>
-            <flux:table.column>Priority</flux:table.column>
-            <flux:table.column>Status</flux:table.column>
-            <flux:table.column>Aksi</flux:table.column>
+            <flux:table.column class="!p-2 !text-[11px]">Kode</flux:table.column>
+            <flux:table.column class="!p-2 !text-[11px]">Platform</flux:table.column>
+            <flux:table.column class="!p-2 !text-[11px]">Group</flux:table.column>
+            <flux:table.column class="!p-2 !text-[11px]">Tema</flux:table.column>
+            <flux:table.column class="!p-2 !text-[11px]">Publish</flux:table.column>
+            <flux:table.column class="!p-2 !text-[11px]">Priority</flux:table.column>
+            <flux:table.column class="!p-2 !text-[11px]">Status</flux:table.column>
+            <flux:table.column class="!p-2 !text-[11px]">Aksi</flux:table.column>
         </flux:table.columns>
 
         <flux:table.rows>
             @forelse($contents as $content)
                 <flux:table.row wire:key="content-{{ $content->id }}">
-                    <flux:table.cell class="font-mono text-xs">
+                    <flux:table.cell class="!p-1.5 font-mono text-[11px]">
                         {{ $content->content_code }}
                     </flux:table.cell>
 
-                    <flux:table.cell>
-                        <flux:badge :color="$content->platform->code === 'TKM' ? 'purple' : 'blue'">
+                    <flux:table.cell class="!p-1.5">
+                        <flux:badge size="sm" :color="$content->platform->code === 'TKM' ? 'purple' : 'blue'" class="text-[10px]">
                             {{ $content->platform->name }}
                         </flux:badge>
                     </flux:table.cell>
 
-                    <flux:table.cell>
+                    <flux:table.cell class="!p-1.5 text-[11px]">
                         @if($content->contentGroup)
-                            <span class="text-xs text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-2 py-0.5 rounded">
-                                {{ \Illuminate\Support\Str::limit($content->contentGroup->name, 15) }}
+                            <span class="text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-900/20 px-1.5 py-0.5 rounded">
+                                {{ \Illuminate\Support\Str::limit($content->contentGroup->name, 12) }}
                             </span>
                         @else
-                            <span class="text-xs text-zinc-400">-</span>
+                            <span class="text-zinc-400">-</span>
                         @endif
                     </flux:table.cell>
 
-                    <flux:table.cell class="max-w-xs truncate">
+                    <flux:table.cell class="!p-1.5 max-w-[160px] truncate text-[11px]">
                         {{ $content->theme }}
                     </flux:table.cell>
 
-                    <flux:table.cell>
+                    <flux:table.cell class="!p-1.5 whitespace-nowrap text-[11px]">
                         {{ $content->full_publish_date ?? '-' }}
                     </flux:table.cell>
 
-                    <flux:table.cell>
-                        <flux:badge :color="$content->priority_badge_color">
+                    <flux:table.cell class="!p-1.5">
+                        <flux:badge size="sm" :color="$content->priority_badge_color" class="text-[10px]">
                             {{ ucfirst($content->priority->value) }}
                         </flux:badge>
                     </flux:table.cell>
 
-                    <flux:table.cell>
-                        <flux:badge :color="$content->status->color()">
+                    <flux:table.cell class="!p-1.5">
+                        <flux:badge size="sm" :color="$content->status->color()" class="text-[10px]">
                             {{ $content->status->label() }}
                         </flux:badge>
                     </flux:table.cell>
@@ -65,126 +65,112 @@
                             && $smsApproval?->status === 'approved'
                             && (!$rndApproval || $rndApproval->status === 'approved')
                             && (!$legalApproval || $legalApproval->status === 'approved');
+
+                        $myStage = match($userRole) {
+                            'CW' => 'cw',
+                            'CSP' => 'csp',
+                            'SMS' => 'sms',
+                            'RnD' => 'rnd',
+                            'Legal' => 'legal',
+                            default => null,
+                        };
+                        if ($userRole === 'Super Admin') {
+                            $pendingStage = $content->approvals->where('status', 'pending')->first();
+                            $myStage = $pendingStage?->stage;
+                        }
+                        $isPic = auth()->user()->isSuperAdmin()
+                            || auth()->user()->id === $content->pic_copy_id
+                            || auth()->user()->id === $content->pic_visual_id
+                            || auth()->user()->id === $content->pic_video_id;
+                        $qc = $content->tiktokQc;
                     @endphp
 
-                    <flux:table.cell>
-                        <div class="flex gap-2 flex-wrap">
-                            @if($content->copy_brief || $content->visual_brief || $content->video_brief)
-                                <flux:button size="sm" variant="outline" wire:click="openBriefModal({{ $content->id }})">
-                                    Brief
-                                </flux:button>
-                            @endif
-
-                            <flux:button size="sm" variant="outline" wire:click="openEditModal({{ $content->id }})">
+                    <flux:table.cell class="!p-1.5">
+                        <div class="flex items-center gap-1 flex-nowrap">
+                            <button type="button" wire:click="openEditModal({{ $content->id }})" class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
                                 Edit
-                            </flux:button>
-
-                            <flux:button size="sm" variant="outline" wire:click="openVersionModal({{ $content->id }})">
-                                v{{ $content->version }}
-                            </flux:button>
-
-                            <flux:button size="sm" variant="outline" wire:click="openAdjustmentModal({{ $content->id }})">
-                                Log
-                            </flux:button>
+                            </button>
 
                             @if($content->status->value === 'draft')
-                                <flux:button size="sm" variant="primary" color="blue" wire:click="startProduction({{ $content->id }})">
-                                    Mulai Produksi
-                                </flux:button>
-                                <flux:button size="sm" variant="danger" wire:click="confirmDelete({{ $content->id }})">
-                                    Hapus
-                                </flux:button>
+                                <button type="button" wire:click="startProduction({{ $content->id }})" class="text-[11px] text-blue-600 dark:text-blue-400 hover:underline whitespace-nowrap">
+                                    Produksi
+                                </button>
+                                @if(auth()->user()->isSuperAdmin() || auth()->user()->hasRole('CSP') || auth()->user()->hasRole('CW'))
+                                    <button type="button" wire:click="confirmDelete({{ $content->id }})" class="text-[11px] text-red-500 hover:underline whitespace-nowrap">
+                                        Hapus
+                                    </button>
+                                @endif
                             @endif
 
-                            @if($content->status->value === 'in_production')
-                                @php
-                                    $isPic = auth()->user()->isSuperAdmin()
-                                        || auth()->user()->id === $content->pic_copy_id
-                                        || auth()->user()->id === $content->pic_visual_id
-                                        || auth()->user()->id === $content->pic_video_id;
-                                @endphp
-                                @if($isPic)
-                                    <flux:button size="sm" variant="primary" color="pink" wire:click="submitForApproval({{ $content->id }})">
-                                        Submit for Review
-                                    </flux:button>
-                                @endif
+                            @if($content->status->value === 'in_production' && $isPic)
+                                <button type="button" wire:click="submitForApproval({{ $content->id }})" class="text-[11px] text-pink-600 dark:text-pink-400 hover:underline whitespace-nowrap">
+                                    Submit
+                                </button>
                             @endif
 
                             @if($content->platform->code === 'TKM' && in_array($content->status->value, ['in_production', 'ready_review', 'approved']))
-                                @php $qc = $content->tiktokQc; @endphp
                                 @if($qc && $qc->status === 'passed')
-                                    <flux:badge size="sm" color="green">QC: Lulus</flux:badge>
-                                @elseif($qc && $qc->status === 'need_revision')
-                                    <flux:button size="sm" variant="outline" wire:click="openQcModal({{ $content->id }})">
-                                        QC: Revisi
-                                    </flux:button>
+                                    <span class="text-[11px] text-green-600">QC✓</span>
                                 @else
-                                    <flux:button size="sm" variant="outline" wire:click="openQcModal({{ $content->id }})">
-                                        QC
-                                    </flux:button>
-                                @endif
-                            @endif
-
-                            @if($content->status->value === 'approved')
-                                <flux:button size="sm" variant="primary" color="purple" wire:click="openScheduleModal({{ $content->id }})">
-                                    Schedule
-                                </flux:button>
-                            @endif
-
-                            @if($content->status->value === 'scheduled')
-                                <flux:button size="sm" variant="primary" color="emerald" wire:click="openPublishModal({{ $content->id }})">
-                                    Mark Published
-                                </flux:button>
-                            @endif
-
-                            @if($content->status->value === 'published')
-                                <flux:button size="sm" variant="outline" wire:click="openChecklistModal({{ $content->id }})">
-                                    Checklist
-                                </flux:button>
-                                @if($content->live_url)
-                                    <a href="{{ $content->live_url }}" target="_blank" class="text-xs text-blue-500 hover:underline">🔗</a>
+                                    <button type="button" wire:click="openQcModal({{ $content->id }})" class="text-[11px] text-purple-600 dark:text-purple-400 hover:underline whitespace-nowrap">
+                                        {{ $qc && $qc->status === 'need_revision' ? 'QC⚠' : 'QC' }}
+                                    </button>
                                 @endif
                             @endif
 
                             @if($content->status->value === 'ready_review')
-                                @php
-                                    $myStage = match($userRole) {
-                                        'CW' => 'cw',
-                                        'CSP' => 'csp',
-                                        'SMS' => 'sms',
-                                        'RnD' => 'rnd',
-                                        'Legal' => 'legal',
-                                        default => null,
-                                    };
-                                    if ($userRole === 'Super Admin') {
-                                        $pendingStage = $content->approvals->where('status', 'pending')->first();
-                                        $myStage = $pendingStage?->stage;
-                                    }
-                                @endphp
-
                                 @if($myStage && ($approval = $content->approvals->where('stage', $myStage)->first()) && $approval->status === 'pending')
                                     @php
                                         $prevStage = match($myStage) {
-                                            'cw' => null,
-                                            'csp' => 'cw',
-                                            'sms' => 'csp',
-                                            'rnd' => 'sms',
-                                            'legal' => $rndApproval ? 'rnd' : 'sms',
+                                            'cw' => null, 'csp' => 'cw', 'sms' => 'csp',
+                                            'rnd' => 'sms', 'legal' => $rndApproval ? 'rnd' : 'sms',
                                             default => null,
                                         };
                                         $prevApproved = !$prevStage || $content->approvals->where('stage', $prevStage)->first()?->status === 'approved';
                                     @endphp
                                     @if($prevApproved)
-                                        <flux:button size="sm" variant="primary" color="green" wire:click="confirmApprove({{ $content->id }}, '{{ $myStage }}')">
+                                        <button type="button" wire:click="confirmApprove({{ $content->id }}, '{{ $myStage }}')" class="text-[11px] text-green-600 dark:text-green-400 hover:underline whitespace-nowrap">
                                             Approve
-                                        </flux:button>
+                                        </button>
                                     @else
-                                        <flux:badge size="sm" color="amber">Menunggu</flux:badge>
+                                        <span class="text-[11px] text-amber-600">⏳</span>
                                     @endif
                                 @elseif($allDone)
-                                    <flux:badge size="sm" color="green">Approved</flux:badge>
+                                    <span class="text-[11px] text-green-600">✓</span>
                                 @else
-                                    <flux:badge size="sm" color="amber">Pending</flux:badge>
+                                    <span class="text-[11px] text-amber-600">⏳</span>
+                                @endif
+                            @endif
+
+                            @if(in_array($content->status->value, ['ready_review', 'approved', 'scheduled', 'published']))
+                                <button type="button" wire:click="openVersionModal({{ $content->id }})" class="text-[11px] text-zinc-500 hover:underline whitespace-nowrap">
+                                    v{{ $content->version }}
+                                </button>
+                                <button type="button" wire:click="openAdjustmentModal({{ $content->id }})" class="text-[11px] text-zinc-500 hover:underline whitespace-nowrap">
+                                    Log
+                                </button>
+                            @endif
+
+                            @if($content->status->value === 'approved')
+                                <button type="button" wire:click="openScheduleModal({{ $content->id }})" class="text-[11px] text-purple-600 dark:text-purple-400 hover:underline whitespace-nowrap">
+                                    Schedule
+                                </button>
+                            @endif
+
+                            @if($content->status->value === 'scheduled')
+                                <button type="button" wire:click="openPublishModal({{ $content->id }})" class="text-[11px] text-emerald-600 dark:text-emerald-400 hover:underline whitespace-nowrap">
+                                    Publish
+                                </button>
+                            @endif
+
+                            @if($content->status->value === 'published')
+                                <button type="button" wire:click="openChecklistModal({{ $content->id }})" class="text-[11px] text-zinc-500 hover:underline whitespace-nowrap">
+                                    Checklist
+                                </button>
+                                @if($content->brief?->copy_brief ?? $content->copy_brief || $content->brief?->visual_brief ?? $content->visual_brief || $content->brief?->video_brief ?? $content->video_brief)
+                                    <button type="button" wire:click="openBriefModal({{ $content->id }})" class="text-[11px] text-pink-600 dark:text-pink-400 hover:underline whitespace-nowrap">
+                                        Brief
+                                    </button>
                                 @endif
                             @endif
                         </div>
@@ -192,7 +178,7 @@
                 </flux:table.row>
             @empty
                 <flux:table.row>
-                    <flux:table.cell colspan="8" class="text-center py-8 text-gray-500">
+                    <flux:table.cell colspan="8" class="!p-4 text-center text-zinc-500">
                         Tidak ada data konten
                     </flux:table.cell>
                 </flux:table.row>
@@ -200,7 +186,7 @@
         </flux:table.rows>
     </flux:table>
 
-    <div class="mt-4">
+    <div class="mt-3">
         {{ $contents->links() }}
     </div>
 </div>

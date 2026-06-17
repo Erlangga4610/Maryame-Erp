@@ -51,11 +51,17 @@ class PublishingManager extends Component
         ]);
 
         $content = Content::findOrFail($this->contentId);
-        $content->update([
-            'publish_date' => $this->scheduleDate,
-            'publish_time' => $this->scheduleTime,
-            'status' => 'scheduled',
-        ]);
+
+        if ($content->status->value !== 'approved') {
+            flash()->error('Hanya konten berstatus Approved yang bisa dijadwalkan.');
+            $this->closeScheduleModal();
+            return;
+        }
+
+        $content->publish_date = $this->scheduleDate;
+        $content->publish_time = $this->scheduleTime;
+        $content->status = 'scheduled';
+        $content->save();
 
         flash()->success('Konten berhasil dijadwalkan!');
         $this->closeScheduleModal();
@@ -82,10 +88,17 @@ class PublishingManager extends Component
         ]);
 
         $content = Content::findOrFail($this->contentId);
-        $content->update([
-            'live_url' => $this->publishLiveUrl,
-            'status' => 'published',
-        ]);
+
+        if ($content->status->value !== 'scheduled') {
+            flash()->error('Hanya konten berstatus Scheduled yang bisa dipublish.');
+            $this->closePublishModal();
+            return;
+        }
+
+        $content->live_url = $this->publishLiveUrl;
+        $content->status = 'published';
+        $content->published_at = now();
+        $content->save();
 
         $this->closePublishModal();
         flash()->success('Konten berhasil dipublikasikan!');

@@ -56,6 +56,9 @@
             <flux:button type="button" variant="outline" wire:click="closeQcModal">
                 Batal
             </flux:button>
+            <flux:button type="button" variant="outline" color="red" wire:click="downgradeToNonKk(qcContentId)" class="text-red-600 border-red-300 hover:bg-red-50 dark:hover:bg-red-900/20">
+                Turunkan ke Non-KK
+            </flux:button>
             <flux:button type="button" variant="primary" color="pink" wire:click="saveQc">
                 Simpan QC
             </flux:button>
