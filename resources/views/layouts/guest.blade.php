@@ -14,10 +14,8 @@
     @fluxAppearance
     @vite(['resources/css/app.css'])
 </head>
-<body class="font-sans antialiased bg-zinc-50 dark:bg-zinc-900">
-    <div class="min-h-screen flex items-center justify-center px-4">
-        {{ $slot }}
-    </div>
+<body class="font-sans antialiased">
+    {{ $slot }}
 
     <x-flasher />
 
