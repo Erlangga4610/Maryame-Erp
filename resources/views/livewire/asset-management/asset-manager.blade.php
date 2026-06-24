@@ -9,7 +9,7 @@
                 <div class="relative">
                     @php $isImage = in_array(pathinfo($existingFinalAsset, PATHINFO_EXTENSION), ['jpg','jpeg','png','gif','webp']); @endphp
                     @if ($isImage)
-                        <img src="{{ Storage::url($existingFinalAsset) }}" class="h-28 w-auto object-cover rounded" />
+                        <img src="{{ \App\Helpers\StorageHelper::url($existingFinalAsset) }}" class="h-28 w-auto object-cover rounded" />
                     @else
                         <div class="flex items-center gap-2 text-sm text-zinc-500">
                             <flux:icon.video /> Video asset
@@ -36,7 +36,7 @@
 
             @if ($existingThumbnail)
                 <div class="relative">
-                    <img src="{{ Storage::url($existingThumbnail) }}" class="h-28 w-auto object-cover rounded" />
+                    <img src="{{ \App\Helpers\StorageHelper::url($existingThumbnail) }}" class="h-28 w-auto object-cover rounded" />
                     <flux:button wire:click="deleteThumbnail" size="xs" variant="danger" class="absolute top-1 right-1">
                         Hapus
                     </flux:button>

@@ -13,7 +13,7 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DISK', 'local'),
+    'default' => env('FILESYSTEM_DISK', 'gcs'),
 
     /*
     |--------------------------------------------------------------------------
@@ -57,6 +57,19 @@ return [
             'endpoint' => env('AWS_ENDPOINT'),
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
+            'report' => false,
+        ],
+
+        'gcs' => [
+            'driver' => 'gcs',
+            'project_id' => env('GOOGLE_CLOUD_PROJECT_ID', 'erp-maryame'),
+            'key_file_path' => env('GOOGLE_CLOUD_KEY_FILE', storage_path('app/gcs-credentials.json')),
+            'bucket' => env('GOOGLE_CLOUD_STORAGE_BUCKET', 'dhjb'),
+            'path_prefix' => env('GOOGLE_CLOUD_STORAGE_PATH_PREFIX', 'erp-maryame'),
+            'storage_api_uri' => null,
+            'visibility' => 'private',
+            'visibility_handler' => \League\Flysystem\GoogleCloudStorage\UniformBucketLevelAccessVisibility::class,
+            'throw' => true,
             'report' => false,
         ],
 

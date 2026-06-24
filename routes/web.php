@@ -58,6 +58,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/adjustment/{adjustmentId}', AdjustmentManager::class)->name('adjustment.manager');
     Route::get('/assets/{contentId}', AssetManagerComponent::class)->name('assets.manager');
 
+    Route::get('/storage/gcs/{path}', \App\Http\Controllers\GcsProxyController::class)
+        ->where('path', '.*')
+        ->name('gcs.proxy');
+
     Route::get('/role-guide', RoleGuide::class)->name('role-guide');
 
     Route::get('/master-data/platforms', Platforms::class)->name('master-data.platforms');

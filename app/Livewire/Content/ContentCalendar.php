@@ -371,15 +371,11 @@ class ContentCalendar extends Component
             'audio_guidance', 'originality_instruction', 'thumbnail_note'];
 
         if ($this->finalAsset) {
-            $ext = $this->finalAsset->getClientOriginalExtension();
-            $cleanName = \Illuminate\Support\Str::slug(pathinfo($this->finalAsset->getClientOriginalName(), PATHINFO_FILENAME)) . '-' . time() . '.' . $ext;
-            $data['final_asset_link'] = $this->finalAsset->storeAs('assets', $cleanName, 'public');
+            $data['final_asset_link'] = \App\Helpers\StorageHelper::upload($this->finalAsset, 'assets');
         }
 
         if ($this->thumbnail) {
-            $ext = $this->thumbnail->getClientOriginalExtension();
-            $cleanName = \Illuminate\Support\Str::slug(pathinfo($this->thumbnail->getClientOriginalName(), PATHINFO_FILENAME)) . '-' . time() . '.' . $ext;
-            $data['thumbnail_link'] = $this->thumbnail->storeAs('thumbnails', $cleanName, 'public');
+            $data['thumbnail_link'] = \App\Helpers\StorageHelper::upload($this->thumbnail, 'thumbnails');
         }
 
         if ($this->modalMode === 'create') {

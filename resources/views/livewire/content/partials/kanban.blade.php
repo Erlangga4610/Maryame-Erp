@@ -161,12 +161,12 @@
 
                             <div class="mt-1.5 flex items-center gap-2 text-[10px] text-zinc-400">
                                 @if($content->thumbnail_link)
-                                    <img src="{{ \Illuminate\Support\Facades\Storage::url($content->thumbnail_link) }}" class="size-6 rounded object-cover border border-zinc-200 dark:border-zinc-600" alt="thumb" />
+                                    <img src="{{ \App\Helpers\StorageHelper::url($content->thumbnail_link) }}" class="size-6 rounded object-cover border border-zinc-200 dark:border-zinc-600" alt="thumb" />
                                 @endif
                                 @if($content->final_asset_link)
                                     @php
                                         $faExt = strtolower(pathinfo($content->final_asset_link, PATHINFO_EXTENSION));
-                                        $faUrl = \Illuminate\Support\Facades\Storage::url($content->final_asset_link);
+                                        $faUrl = \App\Helpers\StorageHelper::url($content->final_asset_link);
                                     @endphp
                                     @if(in_array($faExt, ['jpg', 'jpeg', 'png', 'gif', 'webp']))
                                         <a href="{{ $faUrl }}" target="_blank" title="Lihat asset">

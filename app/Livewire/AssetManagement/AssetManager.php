@@ -5,8 +5,8 @@ namespace App\Livewire\AssetManagement;
 use App\Content\Models\Asset;
 use App\Content\Models\Content;
 use App\Content\Models\ContentVersion;
+use App\Helpers\StorageHelper;
 use Illuminate\Support\Facades\Auth;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
 use Livewire\Component;
 use Livewire\WithFileUploads;
@@ -39,9 +39,7 @@ class AssetManager extends Component
             'finalAsset' => 'required|file|mimes:jpg,jpeg,png,gif,webp,mp4,mov,avi|max:204800',
         ]);
 
-        $ext = $this->finalAsset->getClientOriginalExtension();
-        $cleanName = Str::slug(pathinfo($this->finalAsset->getClientOriginalName(), PATHINFO_FILENAME)) . '-' . time() . '.' . $ext;
-        $path = $this->finalAsset->storeAs('assets', $cleanName, 'public');
+        $path = StorageHelper::upload($this->finalAsset, 'assets/final');
 
         $content = Content::findOrFail($this->contentId);
         $content->update(['final_asset_link' => $path]);
@@ -65,9 +63,7 @@ class AssetManager extends Component
             'thumbnail' => 'required|image|mimes:jpg,jpeg,png,gif,webp|max:10240',
         ]);
 
-        $ext = $this->thumbnail->getClientOriginalExtension();
-        $cleanName = Str::slug(pathinfo($this->thumbnail->getClientOriginalName(), PATHINFO_FILENAME)) . '-' . time() . '.' . $ext;
-        $path = $this->thumbnail->storeAs('thumbnails', $cleanName, 'public');
+        $path = StorageHelper::upload($this->thumbnail, 'assets/thumbnails');
 
         $content = Content::findOrFail($this->contentId);
         $content->update(['thumbnail_link' => $path]);
@@ -88,7 +84,7 @@ class AssetManager extends Component
     public function deleteAsset($assetId)
     {
         $asset = Asset::findOrFail($assetId);
-        Storage::disk('public')->delete($asset->link_or_path);
+        StorageHelper::delete($asset->link_or_path);
         $asset->delete();
 
         flash()->success('Asset berhasil dihapus.');
@@ -99,7 +95,7 @@ class AssetManager extends Component
     {
         $content = Content::findOrFail($this->contentId);
         if ($content->final_asset_link) {
-            Storage::disk('public')->delete($content->final_asset_link);
+            StorageHelper::delete($content->final_asset_link);
             $content->update(['final_asset_link' => null]);
             $this->existingFinalAsset = null;
             flash()->success('Asset final berhasil dihapus.');
@@ -111,7 +107,7 @@ class AssetManager extends Component
     {
         $content = Content::findOrFail($this->contentId);
         if ($content->thumbnail_link) {
-            Storage::disk('public')->delete($content->thumbnail_link);
+            StorageHelper::delete($content->thumbnail_link);
             $content->update(['thumbnail_link' => null]);
             $this->existingThumbnail = null;
             flash()->success('Thumbnail berhasil dihapus.');
