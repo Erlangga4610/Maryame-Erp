@@ -1,11 +1,13 @@
 <?php
 
-use App\Livewire\Auth\Login;
+use App\Http\Controllers\GcsProxyController;
 use App\Livewire\ApprovalPipeline\ApprovalWorkflow;
 use App\Livewire\ApprovalPipeline\TikTokQcManager;
 use App\Livewire\AssetManagement\AssetManager as AssetManagerComponent;
+use App\Livewire\Auth\Login;
 use App\Livewire\Content\ApprovalInbox;
 use App\Livewire\Content\CalendarManagement;
+use App\Livewire\Content\Capacity as CapacityPlanning;
 use App\Livewire\Content\ContentCalendar;
 use App\Livewire\Content\MixTracker;
 use App\Livewire\Content\MyTasks;
@@ -14,8 +16,8 @@ use App\Livewire\MasterData\Campaigns;
 use App\Livewire\MasterData\Platforms;
 use App\Livewire\MasterData\Products;
 use App\Livewire\MasterData\Users;
-use App\Livewire\Content\Capacity as CapacityPlanning;
 use App\Livewire\Production\ProductionSchedule;
+use App\Livewire\Profile;
 use App\Livewire\PublishingReporting\AdjustmentManager;
 use App\Livewire\PublishingReporting\PublishingManager;
 use App\Livewire\RoleGuide;
@@ -38,6 +40,8 @@ Route::middleware(['auth'])->group(function () {
 
     Route::get('/dashboard', Dashboard::class)->name('dashboard');
 
+    Route::get('/profile', Profile::class)->name('profile');
+
     Route::get('/contents', ContentCalendar::class)->name('contents.index');
 
     Route::get('/my-tasks', MyTasks::class)->name('my-tasks');
@@ -58,7 +62,7 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/adjustment/{adjustmentId}', AdjustmentManager::class)->name('adjustment.manager');
     Route::get('/assets/{contentId}', AssetManagerComponent::class)->name('assets.manager');
 
-    Route::get('/storage/gcs/{path}', \App\Http\Controllers\GcsProxyController::class)
+    Route::get('/storage/gcs/{path}', GcsProxyController::class)
         ->where('path', '.*')
         ->name('gcs.proxy');
 

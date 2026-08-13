@@ -1,6 +1,6 @@
 # AGENTS.md — maryame-erp
 
-ERP Content Calendar untuk Maryamé — Laravel 13, Livewire 4.3, Flux Pro 2.14, Tailwind v4, PostgreSQL.
+ERP Content Calendar untuk Maryamé — Laravel 13, Livewire 4.3, Flux Pro 2.14, Tailwind v4, PostgreSQL (dev uses SQLite).
 
 ## Quick commands
 
@@ -21,19 +21,24 @@ ERP Content Calendar untuk Maryamé — Laravel 13, Livewire 4.3, Flux Pro 2.14,
 ## Architecture
 
 ```
-app/Content/           Content Calendar, approval, QC TikTok, capacity
-app/Content/Enums/     ContentStatus, ContentType, ContentPriority, ContentFormat, TiktokSubtype
-app/Content/Models/    Content, Approval, TiktokQc, ContentVersion, AdjustmentLog, Brief, Adjustment
-app/Livewire/          All Livewire components (no controllers)
-app/MasterData/        Platforms, Products, Campaigns, Users CRUD
-app/Enums/             Global enums (ApprovalStatus)
-app/Models/            Platform, Product, Campaign, User (Spatie HasRoles)
+app/Content/            Content domain: Enums/, Models/, Observers/, Services/ (ContentCodeGenerator)
+app/Livewire/           All UI (no controllers except GcsProxyController)
+  ├─ Auth/Login, Dashboard/, Content/, MasterData/, Production/, ApprovalPipeline/,
+  │  AssetManagement/, PublishingReporting/, RoleGuide.php
+  └─ Content/Traits/    WithApprovalPipeline, WithPublishingReporting, WithAssetManagement, WithCapacityPlanning
+app/MasterData/         DOES NOT EXIST — CRUD lives in app/Livewire/MasterData/ (+ HasMasterDataPermissions trait)
+app/Enums/              Global enums (ApprovalStatus, AdjustmentType)
+app/Models/             Platform, Product, Campaign, User (Spatie HasRoles), UserCapacitySetting
+app/Helpers/            StorageHelper (GCS upload/delete/url)
+app/Http/Controllers/   Only GcsProxyController (streams private GCS files)
 ```
 
-All routes point to Livewire components (no controllers). Key routes:
+Key routes:
 
 | Route | Component |
 |---|---|
+| `/` `/login` | auto-redirect `/dashboard` (if authed) or `Login` |
+| `/dashboard` | `Dashboard` |
 | `/contents` | `ContentCalendar` — kanban/table/calendar + Fast-Track |
 | `/my-tasks` | `MyTasks` |
 | `/calendar` | `CalendarManagement` |
@@ -46,7 +51,17 @@ All routes point to Livewire components (no controllers). Key routes:
 | `/publish/{contentId}` | `PublishingManager` |
 | `/adjustment/{adjustmentId}` | `AdjustmentManager` |
 | `/assets/{contentId}` | `AssetManager` |
+| `/storage/gcs/{path}` | `GcsProxyController` (view file URLs, authed) |
+| `/role-guide` | `RoleGuide` |
 | `/master-data/{platforms,products,campaigns,users}` | respective CRUD |
+
+## GCS storage (default disk)
+
+- `FILESYSTEM_DISK=gcs`; disk `gcs` in `config/filesystems.php` (private, UBLA visibility). Local SQLite dev still works — GCS only touched when files are uploaded.
+- Credentials: `GOOGLE_CLOUD_KEY_FILE` → `storage/app/gcs-credentials.json` (NOT committed; `.env` and credential file are gitignored).
+- Use `App\Helpers\StorageHelper::upload()/delete()/url()` for file ops — **do not call `Storage::disk('gcs')->url()`** (returns `storage_api_uri` which is null); `StorageHelper::url()` returns `/storage/gcs/{path}` proxy route instead.
+- **Avatar profil = pengecualian**: stored on local `public` disk (`storage/app/public/avatars/`, symlink `public/storage`), URL via `Storage::disk('public')->url()` in `User::avatarUrl()`. Do NOT use StorageHelper for avatars (GCS 401 in dev). This was a deliberate choice — keep it local.
+- Livewire temp uploads use `LIVEWIRE_TEMPORARY_FILE_UPLOAD_DISK=local` (not gcs).
 
 ## Content model enums
 
@@ -57,10 +72,13 @@ All routes point to Livewire components (no controllers). Key routes:
 | `ContentType` | `edukasi`, `jualan`, `testimoni`, `trending`, `ugc`, `campaign` |
 | `ContentFormat` | `video`, `carousel`, `photo`, `stories`, `listing`, `blog`, `broadcast` |
 | `TiktokSubtype` | `kk_interaktif`, `kk_soft_selling`, `non_kk` |
+| `CalendarEntryStatus` | in `app/Content/Enums/` |
 
-Content codes: `{PLATFORM-CODE}-{YYYY}-{MM}-{NNN}` (immutable via Observer, `withTrashed()+lockForUpdate()` transaction).
+`app/Enums/`: `ApprovalStatus` (`pending`/`approved`/`revision`), `AdjustmentType` (`minor`/`major`/`reactive`).
 
-## Approval pipeline (5 tahap)
+Content codes: `{PLATFORM-CODE}-{YYYY}-{MM}-{NNN}` — generated in `ContentObserver::creating`, immutable (blocked in `updating`), `ContentCodeGenerator` uses `withTrashed()+lockForUpdate()` transaction.
+
+## Approval pipeline
 
 ```
 draft → in_production → ready_review → CW approve → CSP approve → SMS approve → (RnD if claim) → (Legal if sensitive) → approved
@@ -76,7 +94,7 @@ draft → in_production → ready_review → CW approve → CSP approve → SMS 
 - 6 criteria (k1–k6) with pass/fail/na + optional shopping cart checkbox
 - Auto-suggested subtype: KK Interaktif (all pass + cart), KK Soft Selling (cart, not all pass), Non-KK (no cart)
 - "Turunkan ke Non-KK" button available when revision infeasible
-- Stored in `tiktok_qc` table, one-per-content (`updateOrCreate`)
+- Stored in `tiktok_qc` table, one-per-content (`updateOrCreate`); per-criteria rows in `qc_criteria_results`
 
 ## Master Data CRUD + RBAC
 
@@ -106,11 +124,14 @@ These components do **not** exist — use alternatives:
 
 ## Key packages
 
-- `livewire/flux` + `flux-pro` 2.14 — UI components
+- `livewire/flux` + `flux-pro` 2.14 — UI components; **flux-pro is a private composer repo** (`https://composer.fluxui.dev` in `composer.json` `repositories`) — requires auth token if reinstalled
 - `php-flasher/flasher-notyf-laravel` 2.6 — `flash()->success()`/`->error()`/`->warning()`; view `<x-flasher />`
 - `spatie/laravel-permission` 8.0 — RBAC; roles have `rbac_tier` column
+- `spatie/laravel-google-cloud-storage` — `gcs` disk
+- `spatie/laravel-activitylog` 5.0 — audit logging
 - `spatie/laravel-model-states` 2.14 — installed, not actively used
 - `sortablejs` 1.15 (npm) — Drag-drop dep (bundled via Vite, not used directly in views)
+- `laravel/pao` (dev) — asset optimization
 
 ## Validation
 
@@ -125,49 +146,9 @@ These components do **not** exist — use alternatives:
 - 2 test files (4 tests, 8 assertions): ExampleTest (route checks) + ContentVersionTest (model existence/relations)
 - SQLite (`pdo_sqlite`) may be unavailable in this env — only route/model-existence tests work
 
-## Views structure
-
-```
-resources/views/livewire/content/
-├── content-calendar.blade.php          # @include only
-├── approval-inbox.blade.php
-├── my-tasks.blade.php
-├── mix-tracker.blade.php
-├── calendar-management.blade.php
-└── partials/
-    ├── toolbar.blade.php               # view mode + filters + Fast-Track
-    ├── kanban.blade.php                # 4-column board (To Do / In Progress / In Review / Done)
-    ├── table.blade.php                 # paginated table
-    ├── calendar.blade.php              # unscheduled drag panel + calendar grid
-    ├── capacity.blade.php              # capacity planning view
-    └── modals/
-        ├── create-edit.blade.php       # 4-tab form (detail/strategic/technical/asset)
-        ├── approve.blade.php
-        ├── tiktok-qc.blade.php
-        ├── version-history.blade.php
-        ├── adjustment-log.blade.php
-        ├── delete.blade.php
-        ├── schedule.blade.php
-        ├── publish.blade.php
-        ├── post-publish-checklist.blade.php
-        ├── brief.blade.php
-        └── _adjustment.blade.php       # Minor/Major/Reactive adjustment form
-
-resources/views/livewire/approval-pipeline/
-├── tiktok-qc-manager.blade.php
-└── approval-workflow.blade.php
-
-resources/views/livewire/asset-management/
-└── asset-manager.blade.php
-
-resources/views/livewire/publishing-reporting/
-├── publishing-manager.blade.php
-└── adjustment-manager.blade.php
-```
-
 ## ContentCalendar traits
 
-Component at `app/Livewire/Content/ContentCalendar.php` uses 4 traits:
+Component at `app/Livewire/Content/ContentCalendar.php` uses 4 traits in `app/Livewire/Content/Traits/`:
 - `WithApprovalPipeline` — QC + approve/revision + downgradeToNonKk
 - `WithPublishingReporting` — schedule, publish, checklist, adjustment
 - `WithAssetManagement` — version modal, file upload properties (needs `$existingFinalAsset`, `$existingThumbnail`, `$finalAsset`, `$thumbnail`)
@@ -177,21 +158,18 @@ Adjustment validation: reason only required when `$this->adjustmentType !== 'min
 
 ## Taste Skills (UI Quality)
 
-Terinstal di `.agents/skills/` — koleksi *portable agent skills* untuk meningkatkan kualitas output UI/UX. Dari repo [taste-skill](https://github.com/Leonxlnx/taste-skill) (MIT).
+Installed in `.agents/skills/` — portable agent skills from [taste-skill](https://github.com/Leonxlnx/taste-skill) (MIT). Mention the install name in a prompt to activate, e.g. "follow taste-skill: buat landing page dengan VARIANCE 7, MOTION 6, DENSITY 4".
 
-| Skill | Install name | Fungsi |
+| Skill | Install name | Use for |
 |---|---|---|
-| `taste-skill` | `design-taste-frontend` | Default — layout kuat, tipografi tajam, anti boilerplate. 3 dial: VARIANCE/MOTION/DENSITY |
-| `gpt-tasteskill` | `gpt-taste` | Varian stricter untuk GPT/Codex |
-| `image-to-code-skill` | `image-to-code` | Pipeline image → analisis → implementasi frontend |
-| `redesign-skill` | `redesign-existing-projects` | Audit UI existing, lalu perbaiki layout/spacing/hierarchy |
-| `soft-skill` | `high-end-visual-design` | UI premium kalem, kontras lembut, whitespace luas |
+| `taste-skill` | `design-taste-frontend` | Default — strong layout, sharp typography, anti-boilerplate |
+| `gpt-tasteskill` | `gpt-taste` | Stricter variant for GPT/Codex |
+| `image-to-code-skill` | `image-to-code` | Image → analysis → frontend implementation |
+| `redesign-skill` | `redesign-existing-projects` | Audit + fix existing UI |
+| `soft-skill` | `high-end-visual-design` | Premium calm UI, soft contrast, whitespace |
 | `minimalist-skill` | `minimalist-ui` | Editorial UI (Notion/Linear vibes) |
-| `brutalist-skill` | `industrial-brutalist-ui` | Swiss type, sharp contrast, experimental layout |
-| `imagegen-frontend-web` | — | Generate gambar referensi website (hero, landing) |
-| `imagegen-frontend-mobile` | — | Generate gambar referensi mobile flow |
-| `brandkit` | — | Generate moodboard brand kit |
-| `output-skill` | `full-output-enforcement` | Paksa agent output penuh, no placeholder |
+| `brutalist-skill` | `industrial-brutalist-ui` | Swiss type, sharp contrast, experimental |
+| `imagegen-frontend-web` / `-mobile` | — | Generate design reference images |
+| `brandkit` | — | Moodboard brand kit images |
+| `output-skill` | `full-output-enforcement` | Force full output, no placeholders |
 | `stitch-skill` | `stitch-design-taste` | Google Stitch-compatible rules |
-
-Cara pakai: mention skill name di prompt, misal "follow taste-skill: buat landing page dengan VARIANCE 7, MOTION 6, DENSITY 4".

@@ -11,7 +11,7 @@ use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Spatie\Permission\Traits\HasRoles;
 
-#[Fillable(['name', 'email', 'password', 'employee_id', 'position', 'department', 'is_active'])]
+#[Fillable(['name', 'email', 'password', 'employee_id', 'position', 'department', 'phone', 'avatar_path', 'is_active'])]
 #[Hidden(['password', 'remember_token'])]
 class User extends Authenticatable
 {
@@ -21,6 +21,11 @@ class User extends Authenticatable
     public function isSuperAdmin(): bool
     {
         return $this->hasRole('Super Admin');
+    }
+
+    public function avatarUrl(): ?string
+    {
+        return $this->avatar_path ? url('storage/'.$this->avatar_path) : null;
     }
 
     /**

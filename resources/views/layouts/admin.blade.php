@@ -38,10 +38,10 @@
         </flux:navbar>
 
         <flux:dropdown position="top" align="start">
-            <flux:profile avatar="{{ Auth::user()->name ?? 'Admin' }}" />
+            <flux:profile avatar="{{ Auth::user()->avatarUrl() ?? Auth::user()->name ?? 'Admin' }}" />
 
             <flux:menu>
-                <flux:menu.item icon="user" href="#">Profile</flux:menu.item>
+                <flux:menu.item icon="user" href="/profile">Profile</flux:menu.item>
                 <flux:menu.separator />
                 <form method="POST" action="/logout">
                     @csrf
@@ -91,6 +91,7 @@
 
         <flux:sidebar.nav>
             <flux:sidebar.item icon="cog-6-tooth" href="#">Settings</flux:sidebar.item>
+            <flux:sidebar.item icon="user-circle" href="/profile" :current="request()->routeIs('profile')">Profile</flux:sidebar.item>
             <flux:sidebar.item icon="information-circle" href="/role-guide" :current="request()->routeIs('role-guide')">Role Guide</flux:sidebar.item>
         </flux:sidebar.nav>
     </flux:sidebar>
@@ -112,6 +113,7 @@
 
                     <flux:separator />
 
+                    <flux:navlist.item icon="user-circle" href="/profile" :current="request()->routeIs('profile')">Profile</flux:navlist.item>
                     <flux:navlist.item icon="circle-stack">Master Data</flux:navlist.item>
                     <div class="pl-10 space-y-1">
                         <flux:navlist.item href="/master-data/platforms">Platforms</flux:navlist.item>
